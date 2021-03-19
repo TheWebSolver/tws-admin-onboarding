@@ -1,0 +1,19 @@
+{
+  "name": "tws-admin-onboarding",
+  "version": "1.0.0",
+  "description": "An easy and extendible admin onboarding wizard for WordPress Plugins.",
+  "keywords": [
+		"WordPress",
+		"Plugin",
+		"Onboarding",
+		"Wizard",
+		"Admin"
+	],
+  "license": "GPL-3.0-or-later",
+	"authors": [
+		{
+			"name": "hsehszroc",
+			"email": "shesh@thewebsolver.com"
+		}
+	]
+}

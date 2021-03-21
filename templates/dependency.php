@@ -58,7 +58,10 @@ if ( 'pending' === $status || 'installed' === $status ) :
 		</div>
 		<div class="hz_install_depl hz_flx column center">
 		<?php $stat_link = "https://wordpress.org/plugins/{$slug}/advanced/#plugin-download-history-stats"; ?>
-			<a href="<?php echo esc_url( $stat_link ); ?>" target="_blank"><?php esc_html_e( 'Download', 'tws-onboarding' ) . ' ' . wp_kses_post( $name ); ?> <span class="newTab">↗</span></a>
+			<a href="<?php echo esc_url( $stat_link ); ?>" target="_blank">
+				<?php esc_html_e( 'Download', 'tws-onboarding' ); ?> <?php echo esc_html( $name ); ?>
+				<span class="newTab">↗</span>
+			</a>
 		</div>
 		<p id="hz_dyn_btnWrapper" class="onboarding-actions">
 			<a href="<?php echo esc_url( $next_step ); ?>" class="button button-next hz_dyn_btn"><?php echo esc_html( $button_text ); ?> →</a>

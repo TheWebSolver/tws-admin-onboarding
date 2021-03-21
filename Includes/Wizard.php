@@ -34,16 +34,93 @@ defined( 'ABSPATH' ) || exit;
  * {@see @method Config::create_wizard()}
  *
  * This extends the main Wizard class.
- * Use this to add onboarding steps and its args as needed.
  * Use this as a boilerplate for creating own onboarding wizard.
  */
 class Onboarding_Wizard extends Wizard {
+	/**
+	 * Gets the wizard config instance.
+	 *
+	 * @return Config
+	 */
+	private function config() {
+		return Config::get( __NAMESPACE__ );
+	}
+
+	/**
+	 * Sets onboarding prefix.
+	 *
+	 * @inheritDoc
+	 */
+	protected function set_prefix() {
+		$this->prefix = $this->config()->get_prefix();
+	}
+
+	/**
+	 * Sets onboarding page slug.
+	 *
+	 * @inheritDoc
+	 */
+	protected function set_page() {
+		$this->page = $this->config()->get_page();
+	}
+
+	/**
+	 * Sets onboarding root URL relative to current plugin's directory.
+	 *
+	 * @inheritDoc
+	 */
+	protected function set_url() {
+		$this->url = trailingslashit( $this->config()->get_url() );
+	}
+
+	/**
+	 * Sets onboarding root path relative to current plugin's directory.
+	 *
+	 * @inheritDoc
+	 */
+	protected function set_path() {
+		$this->path = $this->config()->get_path();
+	}
+
+	/**
+	 * Sets onboarding HTML head title.
+	 *
+	 * @inheritDoc
+	 */
+	protected function set_title() {
+		$this->title = __( 'MyPlugin Onboarding', 'tws-onboarding' );
+	}
+
+	/**
+	 * Sets user capability to run onboarding wizard.
+	 *
+	 * @inheritDoc
+	 */
+	protected function set_capability() {
+		$this->capability = $this->config()->get_capability();
+	}
+
+	/**
+	 * Sets onboarding logo.
+	 *
+	 * @inheritDoc
+	 */
+	protected function set_logo() {
+		$this->logo = array(
+			'href'   => get_site_url( get_current_blog_id() ),
+			'alt'    => 'The Web Solver Onboarding',
+			'width'  => '135px',
+			'height' => 'auto',
+			'src'    => HZFEX_WOO_PAS_URL . 'Assets/Graphics/Options/separate-tabs.svg',
+		);
+	}
+
 	/**
 	 * Onboarding steps.
 	 *
 	 * @inheritDoc
 	 */
-	public function set_steps() {
+	protected function set_steps() {
 		$steps = array(
 			'general' => array(
 				'name' => __( 'General', 'tws-onboarding' ),
@@ -115,8 +192,6 @@ class Onboarding_Wizard extends Wizard {
 
 	/**
 	 * Displays General Settings options.
-	 *
-	 * @since 1.0
 	 */
 	public function general_view() {
 		$group_names       = Options::get_option( 'attribute_group_names', 'hzfex_woopas_basic_config', '' );
@@ -137,13 +212,11 @@ class Onboarding_Wizard extends Wizard {
 
 	/**
 	 * Saves General Settings options.
-	 *
-	 * @since 1.0
 	 */
 	public function general_save() {
 		$this->validate_save();
 
-		$options = wp_unslash( $_POST );
+		$options = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
 		$general = get_option( 'hzfex_woopas_basic_config', array() );
 
 		// Prepare options value to save.
@@ -159,8 +232,6 @@ class Onboarding_Wizard extends Wizard {
 
 	/**
 	 * Displays Product Page Setting Options.
-	 *
-	 * @since 1.0
 	 */
 	public function product_page_view() {
 		$placement = Options::get_option( 'attribute_display', 'hzfex_woopas_product_page_config', 'additional_information' );
@@ -178,13 +249,11 @@ class Onboarding_Wizard extends Wizard {
 
 	/**
 	 * Saves Product Page Setting Options.
-	 *
-	 * @since 1.0
 	 */
 	public function product_page_save() {
 		$this->validate_save();
 
-		$options = wp_unslash( $_POST );
+		$options = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
 		$product = get_option( 'hzfex_woopas_product_page_config', array() );
 
 		// Prepare options value to save.

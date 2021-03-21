@@ -21,12 +21,11 @@
  * ╚═╝      ╚═╝    ═══════════════╝
  */
 
-namespace TheWebSolver\Woo\Attribute\Onboarding;
+namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. MUST USE YOUR OWN.
 
-// namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. Must use your own.
-
-use TheWebSolver\Woo\Attribute\Installer;
+use stdClass;
 use WP_Error;
+use TheWebSolver\Core\Admin\Onboarding\Wizard;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -66,6 +65,22 @@ final class Config {
 	const CAPABILITY = 'manage_options';
 
 	/**
+	 * The onboarding wizard child-class file path.
+	 *
+	 * @var string
+	 */
+	private $child_file;
+
+	/**
+	 * The onboarding wizard child-class name.
+	 *
+	 * @var string
+	 *
+	 * @since 1.0
+	 */
+	private $child_name;
+
+	/**
 	 * Initializes onboarding wizard.
 	 *
 	 * @return object In this example, it will be `TWS_Myplugin_Wizard`.
@@ -87,11 +102,28 @@ final class Config {
 	 * @todo Set necessary property values for the onboarding wizard.
 	 */
 	public function create_wizard() {
-		// New shiny wizard creation.
-		$onboarding_wizard = new Onboarding_Wizard( 'woocommerce' );
-		$onboarding_wizard->init();
+		// Prepare and instantiate external child-class, if valid.
+		$class = new stdClass();
+		if ( file_exists( $this->child_file ) && 0 < strlen( $this->child_name ) ) {
+			// Include the child-class file.
+			include_once $this->child_file;
 
-		return $onboarding_wizard;
+			// Prepare classname using the same namespace as this (config) file.
+			$child = '\\' . __NAMESPACE__ . '\\' . $this->child_name;
+			$class = class_exists( $child ) ? new $child() : $class;
+		}
+
+		// Create onboarding wizard from external child-class, if instance of abstract class "Wizard".
+		if ( $class instanceof Wizard ) {
+			$onboarding = $class;
+		} else {
+			// New shiny wizard creation from internal child-class.
+			$onboarding = new Onboarding_Wizard( 'woocommerce' );
+		}
+
+		$onboarding->init();
+
+		return $onboarding;
 	}
 
 	/**
@@ -138,8 +170,21 @@ final class Config {
 		 * @var bool
 		 *
 		 * @since 1.0
+		 * @example usage
+		 * ```
+		 * // Disable redirection after plugin activation.
+		 * add_filter( 'hzfex_enable_onboarding_redirect', 'no_redirect', 10, 2 );
+		 * function no_redirect( $enable, $prefix ) {
+		 *  // Bail if not our onboarding wizard.
+		 *  if ( 'my-prefix' !== $prefix ) {
+		 *   return $enable;
+		 *  }
+		 *
+		 *  return false;
+		 * }
+		 * ```
 		 */
-		$onboard_redirect = apply_filters( $this->get_prefix() . '_onboarding_redirect', true );
+		$onboard_redirect = apply_filters( 'hzfex_enable_onboarding_redirect', true, $this->get_prefix() );
 		$is_new_install   = get_option( 'tws_woopas_installed_data', true );
 
 		if ( $is_new_install && $onboard_redirect ) {
@@ -178,17 +223,57 @@ final class Config {
 		 * @var bool
 		 *
 		 * @since 1.0
+		 * @example usage
+		 * ```
+		 * // Disable redirection after plugin activation.
+		 * add_filter( 'hzfex_enable_onboarding_redirect', 'no_redirect', 10, 2 );
+		 * function no_redirect( $enable, $prefix ) {
+		 *  // Bail if not our onboarding wizard.
+		 *  if ( 'my-prefix' !== $prefix ) {
+		 *   return $enable;
+		 *  }
+		 *
+		 *  return false;
+		 * }
+		 * ```
 		 */
-		$onboard_redirect = apply_filters( $this->get_prefix() . '_onboarding_redirect', true );
+		$onboard_redirect = apply_filters( 'hzfex_enable_onboarding_redirect', true, $this->get_prefix() );
+
+		/**
+		 * WPHOOK: Filter -> additional check before starting onboarding wizard after plugin activation.
+		 *
+		 * @param string[] $check Must have all values as `true` (in string, not bool) to pass the check.
+		 *
+		 * @var string[]
+		 *
+		 * @since 1.0
+		 * @example usage
+		 * ```
+		 * // Lets make some checks before onboarding redirection after plugin activation.
+		 * add_filter( 'hzfex_onboarding_check_before_start', 'start_onboarding', 10, 2 );
+		 * function start_onboarding( $check, $prefix ) {
+		 *  // Bail if not our onboarding wizard.
+		 *  if ( 'my-prefix' !== $prefix ) {
+		 *   return $check;
+		 *  }
+		 *
+		 *  // If PHP version less than or equal to "7.0", don't redirect onboarding.
+		 *  if ( version_compare( phpversion(), '7.0', '<=' ) ) {
+		 *   $check[] = 'false';
+		 *  }
+		 *
+		 *  return $check;
+		 * }
+		 * ```
+		 */
+		$check = apply_filters( 'hzfex_onboarding_check_before_start', array( 'true' ), $this->get_prefix() );
 
 		// Start onboarding wizard if everything seems new and shiny!!!
 		if (
 			'yes' === get_transient( $this->get_prefix() . '_onboarding_redirect' ) &&
 			true === current_user_can( $this->get_capability() ) &&
-			true === $onboard_redirect
-
-			// REVIEW: Any additional checks can be done here.
-			&& false === Installer::check_failed()
+			true === $onboard_redirect &&
+			! in_array( 'false', $check, true )
 			) {
 			add_action( 'admin_init', array( $this, 'start_onboarding_wizard' ) );
 		}
@@ -290,28 +375,29 @@ final class Config {
 	 * Singleton config class in this namespace.
 	 *
 	 * @param string $namespace This file namespace.
+	 * @param string $src       (Optional) The child-class file source path.
+	 * @param string $name      (optional) The onboarding wizard child-class extending abstract class.
 	 *
-	 * @return Config|WP_Error Config instance in this namespace, die with WP_Error msg if namespace not declared or did't match.
+	 * @return Config|void Config instance in this namespace, die with WP_Error msg if namespace not declared or did't match.
 	 *
 	 * @since 1.0
 	 * @static
 	 */
-	public static function get( string $namespace ) {
+	public static function get( string $namespace, $src = '', string $name = '' ) {
 		static $config = false;
 
 		// Trim beginning slashes from namespace, if any, to exact match namespace.
 		$namespace = ltrim( $namespace, '\\' );
 		$error     = null;
 		$file      = basename( __FILE__ );
-		$dir       = explode( '\\', dirname( __FILE__ ) );
-		$dir       = array_pop( $dir );
+		$dir       = dirname( __FILE__ );
 		$noncmsg   = __( 'Declare valid namespace', 'tws-onboarding' );
 		$matchmsg  = __( 'Add same namespace that is passed', 'tws-onboarding' );
 		$message   = sprintf(
 			'%1$s <b>%2$s</b>. %3$s <b>%4$s</b>.',
 			__( 'when instantiating <b>TheWebSolver_Onboarding_Wizard</b> at top of the file', 'tws-onboarding' ),
 			$file,
-			__( 'It is present inside plugin\'s directory', 'tws-onboarding' ),
+			__( 'File is located inside plugin\'s directory', 'tws-onboarding' ),
 			$dir
 		);
 
@@ -341,7 +427,7 @@ final class Config {
 			$error = new WP_Error(
 				'namespace_no_match',
 				__( 'Namespace did not match for the Onboarding Wizard Configuration file.', 'tws-onboarding' ),
-				__( 'Namespace no match', 'tws-onboarding' )
+				__( 'Namespace Mismatch', 'tws-onboarding' )
 			);
 			wp_die(
 				sprintf(
@@ -359,6 +445,13 @@ final class Config {
 
 		if ( ! is_a( $config, get_class() ) ) {
 			$config = new self();
+
+			// Prepare external child-class file, if given.
+			$config->child_file = $src;
+
+			// Set child-class name, if given, breaking namespace supplied.
+			$child_name         = explode( '\\', $name );
+			$config->child_name = array_pop( $child_name );
 		}
 
 		return $config;

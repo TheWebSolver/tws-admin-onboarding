@@ -40,25 +40,25 @@ abstract class Wizard {
 	 *
 	 * @since 1.0
 	 */
-	private $prefix;
+	protected $prefix;
 
 	/**
-	 * The path to the config file.
+	 * The path to the onboarding root.
 	 *
 	 * @var string
 	 *
 	 * @since 1.0
 	 */
-	private $path;
+	protected $path;
 
 	/**
-	 * Onboarding page.
+	 * Onboarding page slug.
 	 *
 	 * @var string
 	 *
 	 * @since 1.0
 	 */
-	private $page;
+	protected $page;
 
 	/**
 	 * Onboarding assets URL.
@@ -67,7 +67,16 @@ abstract class Wizard {
 	 *
 	 * @since 1.0
 	 */
-	private $asset_url;
+	protected $url;
+
+	/**
+	 * HTML head title.
+	 *
+	 * @var string
+	 *
+	 * @since 1.0
+	 */
+	protected $title;
 
 	/**
 	 * All steps.
@@ -157,10 +166,13 @@ abstract class Wizard {
 	 *
 	 * @since 1.0
 	 */
-	public $capability;
+	public $capability = 'manage_options';
 
 	/**
 	 * Recommended plugins.
+	 *
+	 * Recommended step is where the recommended
+	 * plugins will be installed and activated.
 	 *
 	 * @var array
 	 *
@@ -200,17 +212,15 @@ abstract class Wizard {
 	 *                         Don't include the extension `.php`.
 	 * @param string $version  The plugin's version to install.
 	 *                         Useful if server PHP and installed WP not compatible with plugin's latest version.
-	 * @param string $cap      _super optional_ The use capability who can onboard.
 	 *
 	 * @since 1.0
 	 */
-	public function __construct( $slug = '', $filename = '', $version = 'latest', $cap = 'manage_options' ) {
+	public function __construct( $slug = '', $filename = '', $version = 'latest' ) {
 		// Handle dependency plugin.
 		if ( '' !== $slug ) {
-			$this->slug       = $slug;
-			$this->filename   = '' !== $filename ? $filename : $this->slug;
-			$this->version    = $version;
-			$this->capability = $cap;
+			$this->slug     = $slug;
+			$this->filename = '' !== $filename ? $filename : $this->slug;
+			$this->version  = $version;
 
 			// Get plugin status.
 			$basename           = $this->slug . '/' . $this->filename . '.php';
@@ -218,116 +228,85 @@ abstract class Wizard {
 			$this->is_active    = TheWebSolver::maybe_plugin_is_active( $basename );
 		}
 
-		$this->init();
+		$this->title = __( 'TheWebSolver &rsaquo; Onboarding', 'tws-onboarding' );
 	}
 
 	/**
 	 * Sets onboarding prefix.
 	 *
-	 * ### Dependency plugin will be prepared after setting prefix.
-	 *
-	 * @param string $name The prefix name.
-	 *
-	 * @return Wizard
-	 *
 	 * @since 1.0
 	 */
-	public function set_prefix( $name ) {
-		$this->prefix = $name;
-
-		// Prepare dependency data if slug given.
-		if ( '' !== $this->slug ) {
-			$this->prepare_dependency();
-		}
-
-		return $this;
-	}
+	abstract protected function set_prefix();
 
 	/**
-	 * Sets onboarding page.
-	 *
-	 * @param string $name The page name.
-	 *
-	 * @return Wizard
+	 * Sets onboarding page slug.
 	 *
 	 * @since 1.0
 	 */
-	public function set_page( $name ) {
-		$this->page = $name;
-
-		return $this;
-	}
+	abstract protected function set_page();
 
 	/**
-	 * Sets onboarding assets URL.
-	 *
-	 * @param string $url The assets URL.
-	 *
-	 * @return Wizard
+	 * Sets onboarding root URL relative to current plugin's directory.
 	 *
 	 * @since 1.0
 	 */
-	public function set_asset_url( $url ) {
-		$this->asset_url = $url;
+	abstract protected function set_url();
 
-		return $this;
-	}
+	/**
+	 * Sets onboarding root path relative to current plugin's directory.
+	 *
+	 * @since 1.0
+	 */
+	abstract protected function set_path();
+
+	/**
+	 * Sets onboarding HTML head title.
+	 *
+	 * Override this to set own head title.
+	 *
+	 * @since 1.0
+	 */
+	protected function set_title() {}
+
+	/**
+	 * Sets user capability to run onboarding wizard.
+	 *
+	 * @since 1.0
+	 */
+	abstract protected function set_capability();
 
 	/**
 	 * Sets onboarding logo.
 	 *
-	 * @param args $args The logo args.
+	 * Set logo args in an array as below:
 	 * * `string` `href` The logo destination URL.
 	 * * `string` `alt` The logo alt text.
 	 * * `string` `width` The logo width.
 	 * * `string` `height` The logo height.
 	 * * `string` `src` The logo image source.
 	 *
-	 * @return Wizard
-	 *
 	 * @since 1.0
 	 */
-	public function set_logo( $args ) {
-		$this->logo = array(
-			'href'   => isset( $args['href'] ) ? $args['href'] : '',
-			'alt'    => isset( $args['alt'] ) ? $args['alt'] : '',
-			'width'  => isset( $args['width'] ) ? $args['width'] : 'auto',
-			'height' => isset( $args['height'] ) ? $args['height'] : 'auto',
-			'src'    => isset( $args['src'] ) ? $args['src'] : '',
-		);
-
-		return $this;
-	}
-
-	/**
-	 * Sets the plugin path to the config file.
-	 *
-	 * This will set path to `config.php` file which is located at\
-	 * onboarding root directory relative to the the plugins directory\
-	 * as onboarding wizard can be included anywhere within plugin.\
-	 * ***!!!!!!!!!! WHO AM I KIDDING WITH !!!!!!!!!!***
-	 *
-	 * This is an alternate way to define path to `tws-admin-onboarding.php`\
-	 * instead of defining file constant to `tws-admin-onboarding.php`.
-	 *
-	 * @param string $path The onboarding wizard path to `config.php` file.
-	 *
-	 * @return Wizard
-	 *
-	 * @since 1.0
-	 */
-	public function set_path( $path ) {
-		$this->path = $path;
-
-		return $this;
-	}
+	abstract protected function set_logo();
 
 	/**
 	 * Initialize onboarding wizard.
 	 *
+	 * It will call all abstract methods and set respective properties.
+	 *
 	 * @since 1.0
 	 */
-	private function init() {
+	public function init() {
+		$this->set_prefix();
+		$this->set_url();
+		$this->set_path();
+		$this->set_title();
+		$this->set_page();
+
+		if ( 0 < strlen( $this->slug ) ) {
+			$this->prepare_dependency();
+		}
+
 		// Prepare admin user to have the given capability.
 		if ( false === $this->is_active ) {
 			add_filter( 'user_has_cap', array( $this, 'add_user_capability' ) );
@@ -449,7 +428,6 @@ abstract class Wizard {
 		$this->register_scripts();
 
 		// Save data of current step with callback function set with callback function on "save" key of that step.
-		// phpcs:ignore FIXME: ADD THIS AS A METHOD IN config.php file to known when to save.
 		if ( isset( $_POST['save_step'] ) && 'save_step' === $_POST['save_step'] && isset( $this->steps[ $this->step ]['save'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			call_user_func_array( $this->steps[ $this->step ]['save'], array( $this ) );
 		}
@@ -519,23 +497,23 @@ abstract class Wizard {
 	 * @since 1.0
 	 */
 	public function set_step_header() {
-		set_current_screen();
+		set_current_screen( $this->hook_suffix );
 		?>
 		<!DOCTYPE html>
 		<html <?php language_attributes(); ?>>
 		<head>
 			<meta name="viewport" content="width=device-width" />
 			<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-			<title><?php esc_html_e( 'TWS Attributes &rsaquo; Onboarding', 'tws-onboarding' ); ?></title>
+			<title><?php echo esc_html( $this->title ); ?></title>
 			<?php
 			wp_print_scripts( 'onboarding_script' );
 			wp_print_styles( 'onboarding_style' );
-			wp_print_styles( 'hzfex_admin_style' );
 			do_action( 'admin_print_styles' );
 			do_action( 'admin_head' );
 			?>
 		</head>
 		<body class="onboarding admin-onboarding wp-core-ui <?php echo $this->is_installed ? ' tws-onboarding' : 'tws-onboarding-no'; ?>-<?php echo esc_html( $this->slug ); ?>">
+			<!-- onboarding_header -->
 			<header id="onboarding_header" class="hz_flx row center">
 			<?php if ( $this->logo['src'] ) : ?>
 				<h1>
@@ -556,6 +534,8 @@ abstract class Wizard {
 				<a href="<?php echo esc_url( add_query_arg( 'onboarding', 'introduction', admin_url() ) ); ?>" class="button button-large hz_dyn_btn">← <?php esc_html_e( 'Dashboard', 'tws-onboarding' ); ?></a>
 			<?php endif; ?>
 			</header>
+			<!-- #onboarding_header -->
+			<!-- main -->
 			<main id="main">
 		<?php
 	}
@@ -566,11 +546,8 @@ abstract class Wizard {
 	 * @since 1.0
 	 */
 	public function set_step_progress() {
-		$steps = $this->steps;
-
-		// Get steps data.
-		// array_shift( $steps ); // phpcs:ignore -- REVIEW: check if necessary.
 		?>
+		<!-- onboarding_steps -->
 		<aside class="onboarding_steps">
 			<div class="onboarding_steps_wrapper">
 				<ol class="steps_wrapper hz_flx column">
@@ -606,6 +583,7 @@ abstract class Wizard {
 				</ol>
 			</div>
 		</aside>
+		<!-- .onboarding_steps -->
 		<?php
 	}
 
@@ -620,15 +598,20 @@ abstract class Wizard {
 			wp_safe_redirect( esc_url_raw( add_query_arg( 'step', 'introduction' ) ) );
 			exit;
 		}
-
-		echo '<section class="onboarding_content content_step__' . esc_attr( $this->step ) . '">';
-		echo '<div class="onboarding_step_image">';
-		if ( isset( $this->steps[ $this->step ]['image'] ) ) {
-			call_user_func( $this->steps[ $this->step ]['image'] );
-		}
-		echo '</div>';
-		call_user_func( $this->steps[ $this->step ]['view'] );
-		echo '</section>';
+		?>
+		<!-- onboarding_content -->
+		<section class="onboarding_content content_step__<?php echo esc_attr( $this->step ); ?>">
+			<div class="onboarding_step_image">
+			<?php
+			if ( isset( $this->steps[ $this->step ]['image'] ) ) :
+				call_user_func( $this->steps[ $this->step ]['image'] );
+			endif;
+			?>
+			</div>
+			<?php call_user_func( $this->steps[ $this->step ]['view'] ); ?>
+		</section>
+		<!-- .onboarding_content -->
+		<?php
 	}
 
 	/**
@@ -637,11 +620,22 @@ abstract class Wizard {
 	 * @since 1.0
 	 */
 	public function set_step_footer() {
-		if ( 'ready' === $this->step ) :
+		$steps = array_keys( $this->steps );
+		$last  = array_pop( $steps );
+		if ( $last === $this->step ) :
 			?>
-			<a class="onboarding-return" href="<?php echo esc_url( admin_url() ); ?>"><?php esc_html_e( 'Return to the WordPress Dashboard', 'tws-onboarding' ); ?></a>
+			<!-- footer -->
+			<footer id="footer">
+				<a
+				class="onboarding-return"
+				href="<?php echo esc_url( admin_url() ); ?>">
+					<?php esc_html_e( 'Return to the WordPress Dashboard', 'tws-onboarding' ); ?>
+				</a>
+			</footer>
+			<!-- #footer -->
 		<?php endif; ?>
 		</main>
+		<!-- #main -->
 		</body>
 		</html>
 		<?php
@@ -711,8 +705,8 @@ abstract class Wizard {
 		$intro_args = apply_filters(
 			'hzfex_onboarding_intro_default_content',
 			array(
-				'title'       => $title,
-				'description' => $description,
+				'title' => $title,
+				'desc'  => $description,
 			),
 			$this->prefix
 		);
@@ -728,7 +722,7 @@ abstract class Wizard {
 		?>
 		<!-- Introduction -->
 		<h2><?php echo wp_kses_post( $intro_args['title'] ); ?></h2>
-		<p><?php echo wp_kses_post( $intro_args['description'] ); ?></p>
+		<p><?php echo wp_kses_post( $intro_args['desc'] ); ?></p>
 		<!-- #Introduction -->
 
 		<?php
@@ -807,12 +801,12 @@ abstract class Wizard {
 	 * Sets the recommended plugins.
 	 *
 	 * The plugins data in an array.
-	 * * `string` `slug`        - The plugin slug (dirname).
-	 * * `string` `filename`    - The plugin's main file name (excluding `.php`)
-	 * * `string` `title`       - The plugin title/name.
-	 * * `string` `description` - The plugin description.
-	 * * `string` `logo`        - The plugin logo URL.
-	 * * `string` `alt`         - The plugin logo alt text.
+	 * * `string` `slug`  - The plugin slug (dirname).
+	 * * `string` `file`  - The plugin's main file name (excluding `.php`)
+	 * * `string` `title` - The plugin title/name.
+	 * * `string` `desc`  - The plugin description.
+	 * * `string` `logo`  - The plugin logo URL.
+	 * * `string` `alt`   - The plugin logo alt text.
 	 *
 	 * @since 1.0
 	 * @example usage
@@ -820,13 +814,16 @@ abstract class Wizard {
 	 * // tws-admin-onboarding\Includes\Wizard.php child class file.
 	 * // Add recommended plugin.
 	 * protected function set_recommended_plugins() {
-	 *  $this->recommended[] = array(
-	 *   'slug'  => 'woocommerce',
-	 *   'file'  => 'woocommerce',
-	 *   'title' => __( 'WooCommerce', 'textdomain' ),
-	 *   'desc'  => __( 'An e-commerce store for your WordPress', 'textdomain' ),
-	 *   'logo'  => 'path/to/logo.png',
-	 *   'alt'   => __( 'WooCommerce Logo', 'textdomain' ),
+	 *  $this->recommended = array(
+	 *   array(
+	 *    'slug'  => 'woocommerce',
+	 *    'file'  => 'woocommerce',
+	 *    'title' => __( 'WooCommerce', 'tws-onboarding' ),
+	 *    'desc'  => __( 'WooCommerce is the world’s most popular open-source eCommerce solution.', 'tws-onboarding' ),
+	 *    'logo'  => 'https://ps.w.org/woocommerce/assets/icon-256x256.png?rev=2366418',
+	 *    'alt'   => __( 'WooCommerce Logo', 'tws-onboarding' ),
+	 *   ),
+	 *  // Another recommended plugin array args here.
 	 *  );
 	 * }
 	 * ```
@@ -1175,7 +1172,7 @@ abstract class Wizard {
 		 */
 		$script_handles = apply_filters( 'hzfex_register_onboarding_scripts', array( 'jquery', 'hzfex_select2' ), $this->prefix );
 
-		wp_register_script( 'onboarding_script', HZFEX_ONBOARDING_ASSETS_URL . 'onboarding.js', $script_handles, '1.0', false );
+		wp_register_script( 'onboarding_script', $this->url . 'Assets/onboarding.js', $script_handles, '1.0', false );
 
 		wp_localize_script(
 			'onboarding_script',
@@ -1241,7 +1238,7 @@ abstract class Wizard {
 		 * @since 1.0
 		 */
 		$style_handles = apply_filters( 'hzfex_register_onboarding_styles', array( 'hzfex_select2_style', 'googleFont' ), $this->prefix );
-		wp_register_style( 'onboarding_style', HZFEX_ONBOARDING_ASSETS_URL . '/onboarding.css', $style_handles, '1.0' );
+		wp_register_style( 'onboarding_style', $this->url . 'Assets/onboarding.css', $style_handles, '1.0' );
 
 		/**
 		 * WPHOOK: Action -> fires after enqueue onboarding styles and scripts.

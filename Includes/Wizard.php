@@ -17,9 +17,7 @@
  * ╚═╝      ╚═╝    ═══════════════╝
  */
 
-namespace TheWebSolver\Woo\Attribute\Onboarding;
-
-// namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. Uncomment and use your own.
+namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. MUST USE YOUR OWN.
 
 use TheWebSolver;
 use TheWebSolver\Core\Admin\Onboarding\Wizard;

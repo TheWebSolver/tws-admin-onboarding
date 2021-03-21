@@ -6,7 +6,7 @@
  * @todo Set the config namespace.
  * @todo Check the to-dos of all constants and methods for more information.
  *
- * @package TheWebSolver\WooCommerce\Attribute\Onboarding\Class
+ * @package TheWebSolver\Core\Admin\Onboarding\Class
  *
  * -----------------------------------
  * DEVELOPED-MAINTAINED-SUPPPORTED BY
@@ -23,9 +23,10 @@
 
 namespace TheWebSolver\Woo\Attribute\Onboarding;
 
-// namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. Uncomment and use your own.
+// namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. Must use your own.
 
 use TheWebSolver\Woo\Attribute\Installer;
+use WP_Error;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -78,7 +79,7 @@ final class Config {
 	 * // If any dependency plugin needs to be installed on intro page, then use like this:
 	 *
 	 * // If WooCommerce is dependency, version to install is 4.5.0. Then args can be:
-	 * new Onboarding_Wizard( 'woocommerce', '', '4.5.0', self::CAPABILITY );
+	 * new Onboarding_Wizard( 'woocommerce', '', '4.5.0', $this->get_capability() );
 	 *
 	 * // If ACF is dependency, then args can be:
 	 * new Onboarding_Wizard( 'advanced-custom-fields', 'acf' );
@@ -88,20 +89,7 @@ final class Config {
 	public function create_wizard() {
 		// New shiny wizard creation.
 		$onboarding_wizard = new Onboarding_Wizard( 'woocommerce' );
-		$onboarding_wizard
-		->set_prefix( self::PREFIX )
-		->set_page( $this->get_page() )
-		->set_asset_url( plugin_dir_url( __FILE__ ) . 'Assets' )
-		->set_logo(
-			array(
-				'href'   => get_site_url( get_current_blog_id() ),
-				'alt'    => 'The Web Solver Onboarding',
-				'width'  => '135px',
-				'height' => 'auto',
-				'src'    => HZFEX_WOO_PAS_URL . 'Assets/Graphics/Options/separate-tabs.svg',
-			)
-		)
-		->set_path( plugin_dir_path( __FILE__ ) ); // Used for locating template.
+		$onboarding_wizard->init();
 
 		return $onboarding_wizard;
 	}
@@ -124,30 +112,24 @@ final class Config {
 	 * ### Lets assume below code is in file `activate.php` in your plugin.
 	 * ```
 	 * namespace My_Plugin\Core;
-	 * // Maybe you want to set same namespace for onboarding files Config.php and Wizard.php as in this file above.
+	 * // Maybe you want to set namespace for onboarding files "Config.php" and "Includes/Wizard.php" same as in this file. i.e. "My_Plugin\Core".
 	 * // If that's the case, then it will be more easy to work on.
 	 *
 	 * // For Now, lets assume it's different. So, first include the Onboarding Wizard main file like this:
-	 * include_once '/path-to/tws-admin-onboarding.php';
-	 *
-	 * // Here, lets assume namespace is "My_Plugin\Onboarding" in Config.php and Wizard.php file.
+	 * include_once 'my-plugin/path-to/tws-admin-onboarding.php';
+	 * // Here, lets assume namespace is "My_Plugin\Onboarding" in "Config.php" and "Includes/Wizard.php" file. NOTE: Namespace must be same in these two files.
 	 * $onboarding = new TheWebSolver_Onboarding_Wizard( 'My_Plugin\Onboarding' );
-	 * $onboarding->set_config();
 	 *
 	 * // Use it with register activation hook like this:
-	 * register_activation_hook( __MY_MAIN_PLUGIN_FILE__, 'activate_function' );
+	 * register_activation_hook( __MY_PLUGIN_MAIN_FILE__, 'activate_function' );
 	 * function activate_function() {
-	 * \My_Plugin\Onboarding\Config::maybe_enable_wizard();
-	 *
-	 *  // or like this if namespace declarations are same.
-	 *  // i.e. namespace is "My_Plugin\Onboarding" for all three files:
-	 *  Config::maybe_enable_wizard();
+	 * $onboarding->config()->enable_wizard();
 	 * }
 	 * ```
 	 * @todo Use this with function registered at activation hook.
 	 *       For more info: {@see function `register_activation_hook()`).
 	 */
-	public function maybe_enable_wizard() {
+	public function enable_wizard() {
 		/**
 		 * WPHOOK: Filter -> enable/disable onboarding redirect after plugin activation.
 		 *
@@ -157,17 +139,17 @@ final class Config {
 		 *
 		 * @since 1.0
 		 */
-		$onboard_redirect = apply_filters( self::PREFIX . '_onboarding_redirect', true );
+		$onboard_redirect = apply_filters( $this->get_prefix() . '_onboarding_redirect', true );
 		$is_new_install   = get_option( 'tws_woopas_installed_data', true );
 
 		if ( $is_new_install && $onboard_redirect ) {
-			set_transient( self::PREFIX . '_onboarding_redirect', 'yes', 30 );
+			set_transient( $this->get_prefix() . '_onboarding_redirect', 'yes', 30 );
 
 			/**
 			 * Use this option to conditionally show/hide admin notice (or anything else).
 			 * It's will be updated to `complete` only after the last step of the onboarding wizard.
 			 */
-			update_option( self::PREFIX . '_onboarding_status', 'pending' );
+			update_option( $this->get_prefix() . '_onboarding_status', 'pending' );
 		}
 	}
 
@@ -181,31 +163,34 @@ final class Config {
 	 * @todo Any conditional check before starting wizard can be done here.
 	 */
 	public function start_onboarding() {
-		if ( is_admin() ) {
-			$this->create_wizard();
+		// Only run on WordPress Admin.
+		if ( ! is_admin() ) {
+			return;
+		}
 
-			/**
-			 * WPHOOK: Filter -> enable/disable onboarding redirect after plugin activation.
-			 *
-			 * @param bool $redirect Whether to redirect or not.
-			 *
-			 * @var bool
-			 *
-			 * @since 1.0
-			 */
-			$onboard_redirect = apply_filters( self::PREFIX . '_onboarding_redirect', true );
+		$this->create_wizard();
 
-			// Start onboarding wizard if everything seems new and shiny!!!
-			if (
-				'yes' === get_transient( self::PREFIX . '_onboarding_redirect' ) &&
-				true === current_user_can( self::CAPABILITY ) &&
-				true === $onboard_redirect
+		/**
+		 * WPHOOK: Filter -> enable/disable onboarding redirect after plugin activation.
+		 *
+		 * @param bool $redirect Whether to redirect or not.
+		 *
+		 * @var bool
+		 *
+		 * @since 1.0
+		 */
+		$onboard_redirect = apply_filters( $this->get_prefix() . '_onboarding_redirect', true );
 
-				// REVIEW: Any additional checks can be done here.
-				&& false === Installer::check_failed()
-				) {
-				add_action( 'admin_init', array( $this, 'start_onboarding_wizard' ) );
-			}
+		// Start onboarding wizard if everything seems new and shiny!!!
+		if (
+			'yes' === get_transient( $this->get_prefix() . '_onboarding_redirect' ) &&
+			true === current_user_can( $this->get_capability() ) &&
+			true === $onboard_redirect
+
+			// REVIEW: Any additional checks can be done here.
+			&& false === Installer::check_failed()
+			) {
+			add_action( 'admin_init', array( $this, 'start_onboarding_wizard' ) );
 		}
 	}
 
@@ -227,14 +212,36 @@ final class Config {
 		// Bail if on onboarding page or multiple-plugins activated at once.
 		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		if ( $this->get_page() === $current_page || isset( $_GET['activate-multi'] ) ) {
-			delete_transient( self::PREFIX . '_onboarding_redirect' );
+			delete_transient( $this->get_prefix() . '_onboarding_redirect' );
 			return;
 		}
 
 		// Once redirected, that's enough. Don't do it ever again.
-		delete_transient( self::PREFIX . '_onboarding_redirect' );
+		delete_transient( $this->get_prefix() . '_onboarding_redirect' );
 		wp_safe_redirect( admin_url( 'index.php?page=' . $this->get_page() ) );
 		exit;
+	}
+
+	/**
+	 * Gets onboarding wizard prefix.
+	 *
+	 * @return string
+	 *
+	 * @since 1.0
+	 */
+	public function get_prefix() {
+		return self::PREFIX;
+	}
+
+	/**
+	 * Gets user capability to run onboarding wizard.
+	 *
+	 * @return string
+	 *
+	 * @since 1.0
+	 */
+	public function get_capability() {
+		return self::CAPABILITY;
 	}
 
 	/**
@@ -252,18 +259,29 @@ final class Config {
 	 * @todo Use this to point to the onboarding page slug, where applicable.
 	 */
 	public function get_page() {
-		return self::PREFIX . '-onboarding-setup';
+		return $this->get_prefix() . '-onboarding-setup';
 	}
 
 	/**
-	 * Gets onboarding wizard prefix.
+	 * Gets onboarding root URL.
 	 *
 	 * @return string
 	 *
 	 * @since 1.0
 	 */
-	public function get_prefix() {
-		return self::PREFIX;
+	public function get_url() {
+		return plugin_dir_url( __FILE__ );
+	}
+
+	/**
+	 * Gets onboarding root path.
+	 *
+	 * @return string
+	 *
+	 * @since 1.0
+	 */
+	public function get_path() {
+		return plugin_dir_path( __FILE__ );
 	}
 
 	/**
@@ -273,15 +291,70 @@ final class Config {
 	 *
 	 * @param string $namespace This file namespace.
 	 *
-	 * @return Config|false
+	 * @return Config|WP_Error Config instance in this namespace, die with WP_Error msg if namespace not declared or did't match.
 	 *
 	 * @since 1.0
 	 * @static
 	 */
-	public static function set( $namespace ) {
+	public static function get( string $namespace ) {
 		static $config = false;
+
+		// Trim beginning slashes from namespace, if any, to exact match namespace.
+		$namespace = ltrim( $namespace, '\\' );
+		$error     = null;
+		$file      = basename( __FILE__ );
+		$dir       = explode( '\\', dirname( __FILE__ ) );
+		$dir       = array_pop( $dir );
+		$noncmsg   = __( 'Declare valid namespace', 'tws-onboarding' );
+		$matchmsg  = __( 'Add same namespace that is passed', 'tws-onboarding' );
+		$message   = sprintf(
+			'%1$s <b>%2$s</b>. %3$s <b>%4$s</b>.',
+			__( 'when instantiating <b>TheWebSolver_Onboarding_Wizard</b> at top of the file', 'tws-onboarding' ),
+			$file,
+			__( 'It is present inside plugin\'s directory', 'tws-onboarding' ),
+			$dir
+		);
+
+		// Die with not declared message. No cheating by passing empty string.
+		if ( 0 === strlen( $namespace ) ) {
+			$error = new WP_Error(
+				'namespace_not_declared',
+				__( 'Namespace is not declared for the Onboarding Wizard Configuration file.', 'tws-onboarding' ),
+				__( 'Namespace not declared', 'tws-onboarding' )
+			);
+			wp_die(
+				sprintf(
+					'<h1>%1$s</h1><p>%2$s</p><p>%3$s %4$s</p>',
+					esc_html( $error->get_error_data() ),
+					esc_html( $error->get_error_message() ),
+					esc_html( $noncmsg ),
+					wp_kses_post( $message )
+				),
+				esc_html( $error->get_error_data() )
+			);
+
+			return $error;
+		}
+
+		// Die with no mach message.
 		if ( __NAMESPACE__ !== $namespace ) {
-			return $config;
+			$error = new WP_Error(
+				'namespace_no_match',
+				__( 'Namespace did not match for the Onboarding Wizard Configuration file.', 'tws-onboarding' ),
+				__( 'Namespace no match', 'tws-onboarding' )
+			);
+			wp_die(
+				sprintf(
+					'<h1>%1$s</h1><p>%2$s</p><p>%3$s %4$s</p>',
+					esc_html( $error->get_error_data() ),
+					esc_html( $error->get_error_message() ),
+					esc_html( $matchmsg ),
+					wp_kses_post( $message )
+				),
+				esc_html( $error->get_error_data() )
+			);
+
+			return $error;
 		}
 
 		if ( ! is_a( $config, get_class() ) ) {

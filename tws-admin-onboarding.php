@@ -36,24 +36,6 @@ final class TheWebSolver_Onboarding_Wizard {
 	private $namespace;
 
 	/**
-	 * The path to this file's directory.
-	 *
-	 * @var string
-	 *
-	 * @since 1.0
-	 */
-	private $path;
-
-	/**
-	 * The URL to this file's directory.
-	 *
-	 * @var string
-	 *
-	 * @since 1.0
-	 */
-	private $url;
-
-	/**
 	 * Onboarding wizard constructor.
 	 *
 	 * @param string $namespace The Plugin namespace.
@@ -64,34 +46,28 @@ final class TheWebSolver_Onboarding_Wizard {
 	 * // Set plugin namespace like this:
 	 * $wizard = new TWS_Onboarding_Wizard( 'My_Plugin\My_Feature' );
 	 *
-	 * // In files `Config.php` and `Wizard.php`, add namesapce at top like this:
+	 * // In files "Config.php" and "Includes/Wizard.php", add namesapce at top like this:
 	 * namespace My_Plugin\My_Feature;
 	 *  // code starts here.
 	 * ```
-	 * @todo Use the passed namespace for `Config.php` and `Wizard.php`.
+	 * @todo Use the passed namespace for "Config.php" and "Includes/Wizard.php".
 	 */
-	public function __Construct( $namespace ) {
+	public function __construct( $namespace ) {
 		$this->namespace = $namespace;
-		$this->url       = plugin_dir_url( __FILE__ );
-		$this->path      = plugin_dir_path( __FILE__ );
 
 		include_once __DIR__ . '/Config.php';
 		include_once __DIR__ . '/Includes/Source/Onboarding.php';
-
-		// Define default assets URL path.
-		define( 'HZFEX_ONBOARDING_ASSETS_URL', plugin_dir_url( __FILE__ ) . 'Assets/' );
 
 		/**
 		 * The child class that extends main onboarding class.
 		 *
 		 * @todo Extend abstract methods inside this file.
-		 * {@see @method \TheWebSolver\Core\Admin\Onboarding\Wizard::set_steps()}
 		 */
 		include_once __DIR__ . '/Includes/Wizard.php';
 
 		// WordPress Hook to start onboarding.
-		if ( false !== $this->get_config() ) {
-			add_action( 'init', array( $this->get_config(), 'start_onboarding' ) );
+		if ( false !== $this->config() ) {
+			add_action( 'init', array( $this->config(), 'start_onboarding' ) );
 		}
 
 		// Include the web solver API abstraction class.
@@ -112,28 +88,6 @@ final class TheWebSolver_Onboarding_Wizard {
 	}
 
 	/**
-	 * Gets onboarding wizard url.
-	 *
-	 * @return string
-	 *
-	 * @since 1.0
-	 */
-	public function get_url() {
-		return $this->url;
-	}
-
-	/**
-	 * Gets onboarding wizard path.
-	 *
-	 * @return string
-	 *
-	 * @since 1.0
-	 */
-	public function get_path() {
-		return $this->path;
-	}
-
-	/**
 	 * Gets configuration instance.
 	 *
 	 * Config can only be instantiated if namespace matches with namesapce defined in config file.
@@ -143,8 +97,8 @@ final class TheWebSolver_Onboarding_Wizard {
 	 *
 	 * @since 1.0
 	 */
-	public function get_config() {
-		return call_user_func( array( '\\' . $this->namespace . '\\Config', 'set' ), $this->namespace );
+	public function config() {
+		return call_user_func( array( '\\' . $this->namespace . '\\Config', 'get' ), $this->namespace );
 	}
 }
 

@@ -37,9 +37,29 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 		private $namespace;
 
 		/**
+		 * The prefix for onboarding wizard.
+		 *
+		 * @var string
+		 *
+		 * @since 1.0
+		 */
+		private $prefix;
+
+		/**
+		 * The current user capability who can onboard wizard.
+		 *
+		 * @var string
+		 *
+		 * @since 1.0
+		 */
+		private $capability;
+
+		/**
 		 * The onboarding wizard child-class file path.
 		 *
 		 * @var string
+		 *
+		 * @since 1.0
 		 */
 		private $child_file;
 
@@ -59,10 +79,13 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 		 * `Onboarding_Wizard` in file `Includes/Wizard.php` will be used.\
 		 * Class `Onboarding_Wizard` in file `Includes/Wizard.php` is there as a boilerplate and can be used to create the onboarding wizard. All needed abstract functions as already declared there. Make appropriate changes as it seems fit for your use case.
 		 *
-		 * @param string $namespace Your Plugin unique namespace.
-		 * @param string $src       (Optional) The child-class file source path.\
-		 *                          **MUST HAVE SAME _$namespace_ DECLARED AT THE TOP OF THIS SOURCE FILE**.
-		 * @param string $name      (Optional) The onboarding wizard child-class extending abstract class. Just the classname.\
+		 * @param string $namespace  Your Plugin unique namespace.
+		 * @param string $prefix     Prefix for onboarding wizard. MUST BE UNIQUE AND NOT CHANGED ONCE SET.
+		 * @param string $capability The current user capability who can manage onboarding.
+		 *                           Usually the highest level capability. Defaults to `manage_options` **(admin)**.
+		 * @param string $src        (Optional) The child-class file source path.\
+		 *                           **MUST HAVE SAME _$namespace_ DECLARED AT THE TOP OF THIS SOURCE FILE**.
+		 * @param string $name       (Optional) The onboarding wizard child-class extending abstract class. Just the classname.\
 		 *                          No need to add namespace before class as it will be handled by config.
 		 *
 		 * @since 1.0
@@ -77,8 +100,10 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 		 * ```
 		 * @todo Use the passed namespace for "Config.php" and "Includes/Wizard.php".
 		 */
-		public function __construct( string $namespace, string $src = '', string $name = '' ) {
+		public function __construct( string $namespace, string $prefix = '', string $capability = 'manage_options', string $src = '', string $name = '' ) {
 			$this->namespace  = $namespace;
+			$this->prefix     = $prefix;
+			$this->capability = $capability;
 			$this->child_file = $src;
 			$this->child_name = $name;
 
@@ -113,32 +138,98 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 		}
 
 		/**
+		 * Gets onboarding wizard prefix.
+		 *
+		 * @return string
+		 *
+		 * @since 1.0
+		 */
+		public function get_prefix() {
+			return $this->prefix;
+		}
+
+		/**
 		 * Gets configuration instance.
 		 *
 		 * Config can only be instantiated if namespace matches with namesapce defined in config file.
 		 * { @see @property TheWebSolver_Onboarding_Wizard::$namespace }
 		 *
-		 * @return object|false Instantiated config object, false if namespace didn't match.
+		 * @return object|void Instantiated config object, die with namespace mismatch message.
 		 *
 		 * @since 1.0
 		 */
 		public function config() {
+			$namespace = self::validate( $this->namespace, $this->capability );
+
+			if ( is_wp_error( $namespace ) ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				wp_die( $namespace->get_error_message(), $namespace->get_error_data() );
+			}
+
+			$config   = '\\' . $namespace . '\\Config';
+			$instance = call_user_func(
+				array( $config, 'get' ),
+				$namespace,
+				$this->prefix,
+				$this->capability,
+				$this->child_file,
+				$this->child_name
+			);
+
+			return $instance;
+		}
+
+		/**
+		 * Validates namespace.
+		 *
+		 * This static helper method is created for DRY DEVELOPMENT.\
+		 * This can validate namespace in this class as well as in config class.
+		 *
+		 * @param string $namespace   The onboarding wizard config namespace.
+		 * @param string $cap         The current user capability.
+		 * @param bool   $config_file Whether validation is from `Config.php` file or not. Default is `false`.
+		 * @param string $config_ns   Namespace declared on `Config.php` file. No effect if `$config_file` is `false`.
+		 *
+		 * @return string|WP_Error Namespace if valid, `WP_Error` otherwise.
+		 *
+		 * @since 1.0
+		 */
+		public static function validate( string $namespace, string $cap, bool $config_file = false, string $config_ns = '' ) {
 			// Trim beginning slashes from namespace, if any, to exact match namespace.
-			$ns      = ltrim( $this->namespace, '\\' );
+			$ns      = ltrim( $namespace, '\\' );
 			$config  = '\\' . $ns . '\\Config';
-			$dir     = dirname( __FILE__ );
+			$dir     = ltrim( dirname( __FILE__ ), ABSPATH );
+			$notitle = __( 'Namespace not declared', 'tws-onboarding' );
 			$title   = __( 'Namespace Mismatch', 'tws-onboarding' );
 			$nons    = __( 'Namespace is not declared for the Onboarding Wizard Configuration file.', 'tws-onboarding' );
 			$message = __( 'Onboarding Config was instantiated with wrong namespace.', 'tws-onboarding' );
-			$nonote  = __( 'Use plugin\'s unique namespace when instantiating <b>TheWebSolver_Onboarding_Wizard</b> and also declare the same namespace at the top of the <b>Config.php</b> and <b>Includes/Wizard.php</b> files. <br>Files are located inside', 'tws-onboarding' );
-			$note    = __( 'Add same namespace that is passed when instantiating <b>TheWebSolver_Onboarding_Wizard</b> at top of the <b>Config.php</b> and <b>Includes/Wizard.php</b> files. <br>Files are located inside', 'tws-onboarding' );
-			$set     = __( 'Namespace currently passed is', 'tws-onboarding' );
+			$nonote  = __( 'Use your plugin\'s unique namespace when instantiating <b>TheWebSolver_Onboarding_Wizard</b> and also declare the same namespace at the top of the <b>Config.php</b> and <b>Includes/Wizard.php</b> files.', 'tws-onboarding' );
+			$note    = __( 'Add same namespace that is passed when instantiating <b>TheWebSolver_Onboarding_Wizard</b> at top of the <b>Config.php</b> and <b>Includes/Wizard.php</b> files.', 'tws-onboarding' );
+			$passed  = __( 'Namespace currently passed is', 'tws-onboarding' );
+			$located = '';
 
+			if ( ! function_exists( 'wp_get_current_user' ) ) {
+				include_once ABSPATH . 'wp-includes/pluggable.php';
+			}
+
+			$user_caps = wp_get_current_user()->allcaps;
+
+			// Only show directory information if user has given capability.
+			if ( isset( $user_caps[ $cap ] ) && $user_caps[ $cap ] ) {
+				$located = sprintf(
+					'<p>%1$s <b><em>%2$s</em></b></p>',
+					__( 'Files are located inside', 'tws-onboarding' ),
+					$dir
+				);
+			}
+
+			// Case where namespace might be an empty string.
 			if ( 0 === strlen( $ns ) ) {
-				wp_die(
+				return new WP_Error(
+					'namespace_not_declared',
 					sprintf(
-						'<h1>%1$s</h1><p>%2$s</p><p>%3$s <b>%4$s</b>.</p>',
-						esc_html( $title ),
+						'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p>%4$s',
+						esc_html( $notitle ),
 						esc_html( $nons ),
 						wp_kses(
 							$nonote,
@@ -147,34 +238,59 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 								'br' => array(),
 							)
 						),
-						esc_html( $dir ),
-					),
-					esc_html( $title )
-				);
-			}
-
-			if ( ! is_callable( array( $config, 'get' ) ) ) {
-				wp_die(
-					sprintf(
-						'<h1>%1$s</h1><p>%2$s</p><p>%3$s <b>%4$s</b>.</p><hr><p>%5$s <b>%6$s</b>.</p>',
-						esc_html( $title ),
-						esc_html( $message ),
 						wp_kses(
-							$note,
+							$located,
 							array(
+								'p'  => array(),
 								'b'  => array(),
-								'br' => array(),
+								'em' => array(),
 							)
-						),
-						esc_html( $dir ),
-						esc_html( $set ),
-						esc_html( $this->namespace )
+						)
 					),
-					esc_html( $title )
+					esc_html( $notitle )
 				);
 			}
 
-			return call_user_func( array( $config, 'get' ), $ns, $this->child_file, $this->child_name );
+			$error = new WP_Error(
+				'namespace_no_match',
+				sprintf(
+					'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p>%4$s<hr><p>%5$s <em><b>%6$s</b></em></p>',
+					esc_html( $title ),
+					esc_html( $message ),
+					wp_kses(
+						$note,
+						array(
+							'b'  => array(),
+							'br' => array(),
+						)
+					),
+					wp_kses(
+						$located,
+						array(
+							'p'  => array(),
+							'b'  => array(),
+							'em' => array(),
+						)
+					),
+					esc_html( $passed ),
+					esc_html( $namespace )
+				),
+				esc_html( $title )
+			);
+
+			if ( false === $config_file ) {
+				// Case where config file can't be called in given namespace.
+				if ( ! is_callable( array( $config, 'get' ) ) ) {
+					return $error;
+				}
+			} else {
+				// Case where namespace of config file didn't match with given namespace.
+				if ( $config_ns !== $ns ) {
+					return $error;
+				}
+			}
+
+			return $ns;
 		}
 	}
 }

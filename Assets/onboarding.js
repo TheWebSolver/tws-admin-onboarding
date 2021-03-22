@@ -20,6 +20,42 @@ jQuery(function ($) {
 	 */
 	const tws = {
 		/**
+		 * Radio fields control element.
+		 *
+		 * @type {object} `.hz_card_control > .hz_card_control`.
+		 */
+		radio: $('input[data-control="card"]'),
+
+		/**
+		* Radio fields wrapper/parent.
+		*
+		* @type {object} `.hz_radio_control_wrapper`.
+		*/
+		radioParent: $('.hz_card_control_wrapper'),
+
+		/**
+		 * Select field control element.
+		 *
+		 * @type {object} `.hz_select_control .hz_select_control`.
+		 * @property {object}
+		 */
+		select: $('.hz_select_control > .hz_select_control'),
+
+		/**
+		 * Select field control parent container.
+		 *
+		 * @type {object} `fieldset.hz_select_control`.
+		 */
+		selectParent: $('.hz_select_control_wrapper'),
+
+		/**
+		 * Select field control placeholder text.
+		 *
+		 * @type {string}
+		 */
+		selectPlaceholder: 'Select Options',
+
+		/**
 		 * Ajax dependency plugin installer button wrapper.
 		 *
 		 * @type {object} DOM Element `.hz_install_depl`.
@@ -114,6 +150,14 @@ jQuery(function ($) {
 		 * Initialize.
 		 */
 		init: () => {
+			tws.handleRadioChecked();
+			$(tws.radio).on('click', () => {
+				tws.handleRadioClick();
+			});
+
+			if ($(tws.select).length > 0) {
+				tws.initSelect2();
+			}
 			tws.verifyInstall();
 			tws.handleRecommended();
 			tws.showActive();
@@ -283,6 +327,64 @@ jQuery(function ($) {
 			link.unbind('click');
 			link.removeClass('disabled');
 		},
+
+		/**
+		 * Handles radio button on click.
+		 *
+		 * Click toggles class to it's parents's parent DOM element.
+		 * So, it must have proper structure.
+		 *
+		 * @example
+		 * ```
+		 * // Must have atleast these nesting DOM element structure. Parents can be: <td>, <div>, <fieldset>, <p>, etc.
+		 * <li class="hz_card_control_wrapper">
+		 *  <label for="input_first" class="hz_card_control">
+		 *   <p>Radio Field</p>
+		 *   <input id="input_first" name="radio_input" type="radio" class="hz_card_control" />
+		 *  </label>
+		 * </li>
+		 * ```
+		 */
+		handleRadioClick: () => {
+			$(tws.radio).each(function () {
+				$(this).closest($(this).parent().parent()).toggleClass('hz_radio_selected', this.checked);
+			});
+		},
+
+		/**
+		 * Handles radio button on checked state.
+		 *
+		 * Checked radio adds class to it's parents's parent DOM element.
+		 * So, it must have proper structure.
+		 *
+		 * @example
+		 * ```
+		 * // Must have atleast these nesting DOM element structure. Parents can be: <td>, <div>, <fieldset>, <p>, etc.
+		 * <li class="hz_card_control_wrapper">
+		 *  <label for="input_first" class="hz_card_control">
+		 *   <p>Radio Field</p>
+		 *   <input id="input_first" name="radio_input" type="radio" class="hz_card_control" />
+		 *  </label>
+		 * </li>
+		 * ```
+		 */
+		handleRadioChecked: () => {
+			$('input[data-control="card"]:checked').closest($('input').parent().parent()).addClass('hz_radio_selected');
+		},
+
+		/**
+		 * Adds select2 plugin to select dropdown.
+		 */
+		initSelect2: () => {
+			$(tws.select).select2({
+				width: '100%',
+				placeholder: tws.selectPlaceholder,
+				allowClear: false,
+				dropdownParent: $(tws.selectParent),
+				minimumResultsForSearch: 5,
+				closeOnSelect: true
+			});
+		}
 	}
 
 	// Initialize.

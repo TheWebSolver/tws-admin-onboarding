@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+	xmlns:xlink="http://www.w3.org/1999/xlink" id="Layer_1" data-name="Layer 1" width="23.0018mm" height="30.4615mm" viewBox="0 0 65.202 86.3476">
+	<defs>
+		<style>.cls-1{fill:none;}.cls-2{clip-path:url(#clip-path);}.cls-3{fill:#e94300;}.cls-4{fill:#151d79;}.cls-5{fill:#f5c826;}.cls-6{fill:#5ccfff;}.cls-7{fill:#fff;}</style>
+		<clipPath id="clip-path">
+			<rect class="cls-1" x="-59.6051" y="32.5435" width="140.38" height="100.663" transform="translate(-48.7791 24.0853) rotate(-38)"/>
+		</clipPath>
+	</defs>
+	<title>rocket</title>
+	<g id="Artwork_44" data-name="Artwork 44">
+		<g class="cls-2">
+			<g class="cls-2">
+				<path class="cls-3" d="M34.5415,80.5665s15.23-26.5825-.8305-26.0539c-16.0622.5291.8305,26.0539.8305,26.0539"/>
+				<polygon class="cls-4" points="57.01 35.897 45.702 20.975 46.174 36.13 46.286 39.721 59.542 39.308 57.01 35.897"/>
+				<polygon class="cls-4" points="9.229 37.384 7.004 40.944 20.084 40.536 19.972 36.946 19.501 21.791 9.229 37.384"/>
+				<path class="cls-5" d="M45.4755,13.67c-.0025-.0551-3.2026-3.2122-6.4887-6.44a9.4422,9.4422,0,0,0-13.638.4256c-3.0794,3.4262-6.0774,6.7748-6.0757,6.8306l-.005-.151L45.47,13.5184Z"/>
+				<rect class="cls-4" x="19.3421" y="13.9256" width="26.2136" height="5.1144" transform="translate(-0.4987 1.021) rotate(-1.7889)"/>
+				<path class="cls-6" d="M19.4282,19.4467l.8949,28.7661c.1745,5.5932,6.157,6.7453,6.157,6.7453l14.3188-.4461s5.9129-1.0956,5.7266-7.1149l-.8965-28.765Z"/>
+				<path class="cls-7" d="M38.0543,27.5756a5.2567,5.2567,0,1,1-5.4191-5.0909,5.2576,5.2576,0,0,1,5.4191,5.0909"/>
+				<path class="cls-7" d="M38.4393,39.965a5.2563,5.2563,0,1,1-5.4177-5.0907,5.2577,5.2577,0,0,1,5.4177,5.0907"/>
+			</g>
+		</g>
+	</g>
+</svg>

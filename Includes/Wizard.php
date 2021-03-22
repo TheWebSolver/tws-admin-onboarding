@@ -1,6 +1,9 @@
 <?php // phpcs:ignore WordPress.NamingConventions
 /**
  * The Web Solver Onboarding Wizard Initialization.
+ * Boilerplate child-class to extend onboarding wizard class.
+ *
+ * @todo Make changes where applicable.
  *
  * @package TheWebSolver\Core\Admin\Onboarding\Class
  *
@@ -17,11 +20,9 @@
  * ╚═╝      ╚═╝    ═══════════════╝
  */
 
-namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. MUST USE YOUR OWN.
+namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. @todo MUST REPLACE AND USE YOUR OWN.
 
-use TheWebSolver;
 use TheWebSolver\Core\Admin\Onboarding\Wizard;
-use TheWebSolver\Core\Setting\Options;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -36,12 +37,45 @@ defined( 'ABSPATH' ) || exit;
  */
 class Onboarding_Wizard extends Wizard {
 	/**
+	 * Onboarding prefix.
+	 *
+	 * @var string
+	 */
+	private static $child_prefix;
+
+	/**
+	 * Sets child class prefix.
+	 *
+	 * @param string $prefix Will be set from Config file.
+	 */
+	public static function set_child_prefix( $prefix ) {
+		self::$child_prefix = $prefix;
+	}
+
+	/**
 	 * Gets the wizard config instance.
 	 *
 	 * @return Config
+	 *
+	 * @todo Set the same prefix parameter here for
+	 *       {@method `Config::get()`} when instantiating wizard.
+	 *       {@see @method `TheWebSolver_Onboarding_Wizard::__construct()`}
+	 *       Do not use the default `myplugin-prefix` here. Otherwise, wp_die() happens.
 	 */
 	private function config() {
-		return Config::get( __NAMESPACE__ );
+		return Config::get( __NAMESPACE__, self::$child_prefix );
+	}
+
+	/**
+	 * Sets dependency plugin args (use this if need to install required plugin at first step).
+	 *
+	 * @inheritDoc
+	 * @todo Set your own dependency plugin data. If not needed, delete this method.
+	 */
+	protected function set_dependency() {
+		$this->slug     = 'woocommerce';
+		$this->filename = 'woocommerce'; // Not needed as it is same as slug. Included as an example.
+		$this->version  = '4.0.0'; // Not needed if latest to install. Can be: '4.9.2', '4.5.0', '4.0.0' etc.
 	}
 
 	/**
@@ -50,7 +84,7 @@ class Onboarding_Wizard extends Wizard {
 	 * @inheritDoc
 	 */
 	protected function set_prefix() {
-		$this->prefix = $this->config()->get_prefix();
+		$this->prefix = self::$child_prefix;
 	}
 
 	/**
@@ -84,6 +118,7 @@ class Onboarding_Wizard extends Wizard {
 	 * Sets onboarding HTML head title.
 	 *
 	 * @inheritDoc
+	 * @todo Change your onboarding title.
 	 */
 	protected function set_title() {
 		$this->title = __( 'MyPlugin Onboarding', 'tws-onboarding' );
@@ -102,6 +137,7 @@ class Onboarding_Wizard extends Wizard {
 	 * Sets onboarding logo.
 	 *
 	 * @inheritDoc
+	 * @todo Set your own onboarding logo args.
 	 */
 	protected function set_logo() {
 		$this->logo = array(
@@ -109,7 +145,7 @@ class Onboarding_Wizard extends Wizard {
 			'alt'    => 'The Web Solver Onboarding',
 			'width'  => '135px',
 			'height' => 'auto',
-			'src'    => HZFEX_WOO_PAS_URL . 'Assets/Graphics/Options/separate-tabs.svg',
+			'src'    => $this->url . 'Assets/onboarding.svg',
 		);
 	}
 
@@ -117,20 +153,24 @@ class Onboarding_Wizard extends Wizard {
 	 * Onboarding steps.
 	 *
 	 * @inheritDoc
+	 * @todo Set your own onboarding steps.
+	 *       `Introduction`, `Recommended` and `Ready` steps are default will be handled automatically.
+	 *       These default steps have filters to change the contents
+	 *       and those filters will be displayed on respective step page.
 	 */
 	protected function set_steps() {
 		$steps = array(
 			'general' => array(
-				'name' => __( 'General', 'tws-onboarding' ),
-				'desc' => __( 'Let\'s set WooCommerce Attribute group names for managing attributes in respective group.', 'tws-onboarding' ),
-				'view' => array( $this, 'general_view' ),
-				'save' => array( $this, 'general_save' ),
+				'name' => __( 'Text/Checkbox Fields', 'tws-onboarding' ),
+				'desc' => __( 'Text, textarea and checkbox input fields step subtitle displayed in the onboarding steps.', 'tws-onboarding' ),
+				'view' => array( $this, 'text_checkbox_view' ),
+				'save' => array( $this, 'text_checkbox_save' ),
 			),
-			'product' => array(
-				'name' => __( 'Product Page', 'tws-onboarding' ),
-				'desc' => __( 'Let\'s set how attribute groups will be displayed on the single product page.', 'tws-onboarding' ),
-				'view' => array( $this, 'product_page_view' ),
-				'save' => array( $this, 'product_page_save' ),
+			'front'   => array(
+				'name' => __( 'Radio/Select Fields', 'tws-onboarding' ),
+				'desc' => __( 'Radio and select dropdown form fields step subtitle displayed in the onboarding steps.', 'tws-onboarding' ),
+				'view' => array( $this, 'radio_select_form_view' ),
+				'save' => array( $this, 'radio_select_form_save' ),
 			),
 		);
 
@@ -141,16 +181,19 @@ class Onboarding_Wizard extends Wizard {
 	 * Set the recommended plugins.
 	 *
 	 * @inheritDoc
+	 * @todo Manage recommended plugins. Each plugin will be installed and activated on recommended step.
+	 *       There will be enable/disbale option whether or not to intall the recommended plugin.
+	 *       As an example, 5 plugins as set as recommended plugins.
+	 *       If no recommended plugin is given, then the recommended step will not be shown.
 	 */
 	protected function set_recommended_plugins() {
-		// phpcs:disable -- Example recommended plugins OK.
 		$plugins = array(
 			array(
 				'slug'  => 'show-hooks',
 				'title' => __( 'Show Hooks', 'tws-onboarding' ),
 				'desc'  => __( 'A sequential and visual representation of WordPess action and filter hooks.', 'tws-onboarding' ),
 				'logo'  => 'https://ps.w.org/show-hooks/assets/icon-256x256.png?rev=2327503',
-				'alt'   => __( 'Show Hooks Plugin', 'tws-onboarding' ),
+				'alt'   => __( 'Show Hooks logo', 'tws-onboarding' ),
 			),
 			array(
 				'slug'  => 'advanced-custom-fields',
@@ -185,80 +228,164 @@ class Onboarding_Wizard extends Wizard {
 		);
 
 		$this->recommended = $plugins;
-		// phpcs:enable -- Example recommended plugins OK.
 	}
 
 	/**
 	 * Displays General Settings options.
 	 */
-	public function general_view() {
-		$group_names       = Options::get_option( 'attribute_group_names', 'hzfex_woopas_basic_config', '' );
-		$custom_group_name = Options::get_option( 'custom_attribute_group_name', 'hzfex_woopas_basic_config', 'Additional Features' );
-		$exclude_custom    = Options::get_option( 'exclude_custom_attribute_group', 'hzfex_woopas_basic_config', 'off' );
+	public function text_checkbox_view() {
+		$text     = get_option( 'myprefix_simple_input_value', 'Example text default value' );
+		$textarea = get_option( 'myprefix_textarea_value', '' );
+		$checkbox = get_option( 'myprefix_checkbox_value', 'off' );
+		?>
 
-		// Display general step contents from template file.
-		TheWebSolver::get_template(
-			'onboarding/general.php',
-			array(
-				'group_names'       => $group_names,
-				'custom_group_name' => $custom_group_name,
-				'maybe_checked'     => $exclude_custom,
-				'onboarding'        => $this,
-			),
-		);
+		<form method="POST">
+			<!-- contents -->
+			<fieldset>
+				<label for="simple_input"><p><?php esc_html_e( 'Text Input', 'tws-onboarding' ); ?></p>
+					<input id="simple_input" type="text" name="simple_input" value="<?php echo esc_attr( $text ); ?>">
+				</label>
+			</fieldset>
+			<fieldset>
+				<label for="textarea_input"><p><?php esc_html_e( 'Textarea Input', 'tws-onboarding' ); ?></p>
+					<textarea id="textarea_input" name="textarea_input" rows="10" cols="50" placeholder="<?php esc_attr_e( 'Example placeholder&#13;Another feature in new line&#13;Last feature in new line&#13;and so on....', 'tws-onboarding' ); ?>"><?php echo esc_html( $textarea ); ?></textarea>
+				</label>
+			</fieldset>
+			<fieldset class="hz_control_field">
+				<p class="hz_switcher_control">
+					<label for="checkbox_field">
+						<span class="hz_switcher_label">
+							<?php esc_html_e( 'Checkbox Switch', 'tws-onboarding' ); ?>
+							<span class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this checkbox input field in order for switcher toggle control to work. If structure is different, then toggle button will not be created and default checkbox will be displayed.', 'tws-onboarding' ); ?></span>
+							<span class="option_notice alert desc"><?php esc_html_e( 'Alert: switcher control won\'t work if not used this same elements.', 'tws-onboarding' ); ?></span>
+						</span>
+						<input type="checkbox" class="hz_checkbox_input" id="checkbox_field" name="checkbox_field" class="hz_checkbox_input" <?php checked( $checkbox, 'on', true ); ?>>
+						<span class="hz_switcher"></span>
+					</label>
+				</p>
+			</fieldset>
+			<!-- contents end -->
+			<?php $this->get_step_buttons(); ?>
+		</form>
+		<?php
 	}
 
 	/**
 	 * Saves General Settings options.
 	 */
-	public function general_save() {
+	public function text_checkbox_save() {
 		$this->validate_save();
 
 		$options = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
-		$general = get_option( 'hzfex_woopas_basic_config', array() );
 
 		// Prepare options value to save.
-		$general['attribute_group_names']          = ! empty( $options['hzfex_woopas_basic_config']['attribute_group_names'] ) ? sanitize_textarea_field( $options['hzfex_woopas_basic_config']['attribute_group_names'] ) : '';
-		$general['custom_attribute_group_name']    = ! empty( $options['hzfex_woopas_basic_config']['custom_attribute_group_name'] ) ? sanitize_text_field( $options['hzfex_woopas_basic_config']['custom_attribute_group_name'] ) : 'Additional Features';
-		$general['exclude_custom_attribute_group'] = isset( $options['hzfex_woopas_basic_config']['exclude_custom_attribute_group'] ) ? sanitize_text_field( $options['hzfex_woopas_basic_config']['exclude_custom_attribute_group'] ) : 'off';
+		$text     = ! empty( $options['simple_input'] ) ? sanitize_text_field( $options['simple_input'] ) : '';
+		$textarea = ! empty( $options['textarea_input'] ) ? sanitize_textarea_field( $options['textarea_input'] ) : '';
+		$checkbox = ! empty( $options['checkbox_field'] ) ? sanitize_text_field( $options['checkbox_field'] ) : 'off';
 
-		update_option( 'hzfex_woopas_basic_config', $general );
+		update_option( 'myprefix_simple_input_value', $text );
+		update_option( 'myprefix_textarea_value', $textarea );
+		update_option( 'myprefix_checkbox_value', $checkbox );
 
 		wp_safe_redirect( esc_url_raw( $this->get_next_step_link() ) );
 		exit;
 	}
 
 	/**
-	 * Displays Product Page Setting Options.
+	 * Displays Front Page Setting Options.
 	 */
-	public function product_page_view() {
-		$placement = Options::get_option( 'attribute_display', 'hzfex_woopas_product_page_config', 'additional_information' );
-		$separator = Options::get_option( 'attribute_option_separator', 'hzfex_woopas_product_page_config', 'comma' );
+	public function radio_select_form_view() {
+		$radio  = get_option( 'myprefix_radio_input', 'second_option' );
+		$select = get_option( 'myprefix_select_dropdown', 'third_option' );
+		?>
 
-		TheWebSolver::get_template(
-			'onboarding/product-page.php',
-			array(
-				'placement'  => $placement,
-				'separator'  => $separator,
-				'onboarding' => $this,
-			)
-		);
+		<form method="POST">
+			<!-- contents -->
+			<fieldset class="hz_control_field hz_radio_field">
+				<label for="radio_input"><?php esc_html_e( 'Radio Input', 'tws-onboarding' ); ?></label>
+				<p class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this radio input field in order for card toggle control to work.', 'tws-onboarding' ); ?></p>
+				<span class="option_notice alert desc"><?php esc_html_e( 'Waring: If same structure is not used, the card control won\'t work.', 'tws-onboarding' ); ?></span>
+				<ul class="hz_card_control">
+					<li class="hz_card_control_wrapper">
+						<label for="radio_input_first" class="hz_card_control">
+							<input id="radio_input_first" type="radio" name="radio_input" class="hz_card_control" data-type="card" value="first_option" <?php checked( $radio, 'first_option' ); ?>>
+							<div class="hz_card_info hz_flx row center">
+								<div class="radio_option_content">
+									<p><?php esc_html_e( 'Radio input first option', 'tws-onboarding' ); ?></p>
+									<p class="radio_subtitle">
+										<?php
+										echo wp_kses(
+											sprintf(
+												__( '<b>First Option</b> is just for the demo purpose. This is just a long description explaining about the first option in this advanced radio field', 'tws-onboarding' ),
+											),
+											array( 'b' => array() )
+										);
+										?>
+									</p>
+								</div>
+								<div class="radio_option_image">
+									<img src="" alt="">
+								</div>
+							</div>
+						</label>
+					</li>
+					<li class="hz_card_control_wrapper">
+						<label for="radio_input_second" class="hz_card_control">
+							<input id="radio_input_second" type="radio" name="radio_input" class="hz_card_control" data-type="card" value="second_option" <?php checked( $radio, 'second_option' ); ?>>
+							<div class="hz_card_info hz_flx row center">
+								<div class="radio_option_content">
+									<p><?php esc_html_e( 'Radio input second option', 'tws-onboarding' ); ?></p>
+									<p class="radio_subtitle">
+										<?php
+										echo wp_kses(
+											sprintf(
+												__( '<b>Second Option</b> is just for the demo purpose. This is just a long description explaining about the second option in this advanced radio field', 'tws-onboarding' ),
+											),
+											array( 'b' => array() )
+										);
+										?>
+									</p>
+								</div>
+								<div class="radio_option_image">
+									<img src="" alt="">
+								</div>
+							</div>
+						</label>
+					</li>
+				</ul>
+			</fieldset>
+			<fieldset class="hz_select_control hz_select_control_wrapper">
+				<label for="select_dropdown"><?php esc_html_e( 'Advanced select field', 'tws-onboarding' ); ?></label>
+				<p class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this select dropdown field in order for select2 to work.', 'tws-onboarding' ); ?></p>
+				<select id="select_dropdown" class="hz_select hz_select_control widefat" name="select_dropdown">
+					<option value=""></option>
+					<option value="first_option" <?php selected( $select, 'first_option' ); ?>><?php esc_attr_e( 'First Option', 'tws-onboarding' ); ?></option>
+					<option value="second_option" <?php selected( $select, 'second_option' ); ?>><?php esc_attr_e( 'Second Option', 'tws-onboarding' ); ?></option>
+					<option value="third_option" <?php selected( $select, 'third_option' ); ?>><?php esc_attr_e( 'Third Option', 'tws-onboarding' ); ?></option>
+					<option value="forth_option" <?php selected( $select, 'forth_option' ); ?>><?php esc_attr_e( 'Forth Option', 'tws-onboarding' ); ?></option>
+				</select>
+			</fieldset>
+			<!-- contents end -->
+
+			<?php $this->get_step_buttons( true ); ?>
+		</form>
+		<?php
 	}
 
 	/**
-	 * Saves Product Page Setting Options.
+	 * Saves Front Page Setting Options.
 	 */
-	public function product_page_save() {
+	public function radio_select_form_save() {
 		$this->validate_save();
 
 		$options = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
-		$product = get_option( 'hzfex_woopas_product_page_config', array() );
 
 		// Prepare options value to save.
-		$product['attribute_display']          = isset( $options['hzfex_woopas_product_page_config']['attribute_display'] ) ? $options['hzfex_woopas_product_page_config']['attribute_display'] : 'additional_information';
-		$product['attribute_option_separator'] = isset( $options['hzfex_woopas_product_page_config']['attribute_option_separator'] ) ? $options['hzfex_woopas_product_page_config']['attribute_option_separator'] : 'comma';
+		$radio  = ! empty( $options['radio_input'] ) ? sanitize_text_field( $options['radio_input'] ) : 'first_option';
+		$select = ! empty( $options['select_dropdown'] ) ? sanitize_text_field( $options['select_dropdown'] ) : 'first_option';
 
-		update_option( 'hzfex_woopas_product_page_config', $product );
+		update_option( 'myprefix_radio_input', $radio );
+		update_option( 'myprefix_select_dropdown', $select );
 
 		wp_safe_redirect( esc_url_raw( $this->get_next_step_link() ) );
 		exit;

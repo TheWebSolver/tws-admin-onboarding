@@ -1,10 +1,9 @@
 <?php // phpcs:ignore WordPress.NamingConventions
 /**
  * The Web Solver Onboarding Wizard Configuration.
- * Make appropriate changes to constants and methods, where applicable.
  *
  * @todo Set the config namespace.
- * @todo Check the to-dos of all constants and methods for more information.
+ * @todo Check all todo tags and make approriate changes where needed.
  *
  * @package TheWebSolver\Core\Admin\Onboarding\Class
  *
@@ -21,10 +20,10 @@
  * ╚═╝      ╚═╝    ═══════════════╝
  */
 
-namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. MUST USE YOUR OWN.
+namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. @todo MUST REPLACE AND USE YOUR OWN.
 
 use stdClass;
-use WP_Error;
+use TheWebSolver_Onboarding_Wizard;
 use TheWebSolver\Core\Admin\Onboarding\Wizard;
 
 // Exit if accessed directly.
@@ -40,12 +39,9 @@ final class Config {
 	 * @var string
 	 *
 	 * @since 1.0
-	 * @todo Prefix will be used all over onboarding setup. Make it unique.
-	 *       Set the prefix once as needed when including in the plugin.
-	 *       It will be used for WordPress hooks, options, transients, etc.
-	 *       So, once set only change it if you are certain of the consequences.
+	 * @todo Pass as a parameter to {@method `Config::set()`} and don't change it here directly.
 	 */
-	const PREFIX = 'tws-woopas';
+	private $prefix = 'myplugin-prefix';
 
 	/**
 	 * The user capability who can access onboarding.
@@ -53,21 +49,16 @@ final class Config {
 	 * @var string Default is `manage_options` i.e. Admin Capability.
 	 *
 	 * @since 1.0
-	 * @example usage
-	 * ```
-	 * // If dependency plugin is WooCommerce, then maybe use:
-	 * const CAPABILITY = 'manage_woocommerce';
-	 * // This filters the user cap and apply 'manage_woocommerce' capability to admin.
-	 * // {@see @method `Wizard::init()`}
-	 * ```
-	 * @todo Only change capability if absolutely necessary.
+	 * @todo Pass as a parameter to {@method `Config::set()`} and don't change it here directly.
 	 */
-	const CAPABILITY = 'manage_options';
+	private $capability = 'manage_options';
 
 	/**
 	 * The onboarding wizard child-class file path.
 	 *
 	 * @var string
+	 *
+	 * @since 1.0
 	 */
 	private $child_file;
 
@@ -83,23 +74,9 @@ final class Config {
 	/**
 	 * Initializes onboarding wizard.
 	 *
-	 * @return object In this example, it will be `TWS_Myplugin_Wizard`.
+	 * @return object The external child-class onboarding instance if valid, `Onboarding_Wizard` if not.
 	 *
 	 * @since 1.0
-	 * @example usage
-	 * ```
-	 * // If no dependency needed, then use like this:
-	 * new Onboarding_Wizard();
-	 *
-	 * // If any dependency plugin needs to be installed on intro page, then use like this:
-	 *
-	 * // If WooCommerce is dependency, version to install is 4.5.0. Then args can be:
-	 * new Onboarding_Wizard( 'woocommerce', '', '4.5.0', $this->get_capability() );
-	 *
-	 * // If ACF is dependency, then args can be:
-	 * new Onboarding_Wizard( 'advanced-custom-fields', 'acf' );
-	 * ```
-	 * @todo Set necessary property values for the onboarding wizard.
 	 */
 	public function create_wizard() {
 		// Prepare and instantiate external child-class, if valid.
@@ -117,8 +94,29 @@ final class Config {
 		if ( $class instanceof Wizard ) {
 			$onboarding = $class;
 		} else {
-			// New shiny wizard creation from internal child-class.
-			$onboarding = new Onboarding_Wizard( 'woocommerce' );
+			/**
+			 * New shiny wizard creation from internal child-class.
+			 *
+			 * @example usage
+			 * ```
+			 * // If no dependency needed, then use like this:
+			 * new Onboarding_Wizard();
+			 *
+			 * // If any dependency plugin needs to be installed on intro page, then use like this:
+			 *
+			 * // If WooCommerce is dependency, version to install is 4.5.0. Then args can be:
+			 * new Onboarding_Wizard( 'woocommerce', '', '4.5.0', $this->get_capability() );
+			 *
+			 * // If ACF is dependency, then args can be:
+			 * new Onboarding_Wizard( 'advanced-custom-fields', 'acf' );
+			 * ```
+			 * @todo Set necessary property values for the onboarding wizard.
+			 */
+			include_once __DIR__ . '/Includes/Wizard.php';
+
+			// Using static method to get same config instance with config prefix.
+			Onboarding_Wizard::set_child_prefix( $this->prefix );
+			$onboarding = new Onboarding_Wizard();
 		}
 
 		$onboarding->init();
@@ -315,7 +313,7 @@ final class Config {
 	 * @since 1.0
 	 */
 	public function get_prefix() {
-		return self::PREFIX;
+		return $this->prefix;
 	}
 
 	/**
@@ -326,7 +324,7 @@ final class Config {
 	 * @since 1.0
 	 */
 	public function get_capability() {
-		return self::CAPABILITY;
+		return $this->capability;
 	}
 
 	/**
@@ -374,82 +372,75 @@ final class Config {
 	 *
 	 * Singleton config class in this namespace.
 	 *
-	 * @param string $namespace This file namespace.
-	 * @param string $src       (Optional) The child-class file source path.
-	 * @param string $name      (optional) The onboarding wizard child-class extending abstract class.
+	 * @param string $namespace  This file namespace. Prefix will be used all over onboarding setup.
+	 *                           {@todo MUST BE A UNIQUE NAMESPACE FOR YOUR PLUGIN}
+	 *                           It will be used for WordPress Hooks, Options, Transients, etc.
+	 *                           So, once set only change it if you are certain of the consequences.
+	 * @param string $prefix     Prefix for onboarding wizard. Only change once set if you know the consequences.
+	 *                           {@todo MUST BE A UNIQUE PREFIX FOR YOUR PLUGIN}.
+	 * @param string $capability The current user capability who can manage onboarding.
+	 *                           {@todo CHANGE CAPABILITY ONLY IF ABSOLUTELY NECESSARY}.
+	 *                           For e.g. If will be using WooCommerce later, or maybe installing WooCommerce
+	 *                           as dependency plugin from within intro page of onboarding wizard,
+	 *                           then maybe set it as `manage_woocommerce` (although not necessary).
+	 *                           This filters the user cap and apply `manage_woocommerce` capability to `admin`
+	 *                           even if `WooCommerce` not installed yet.
+	 *                           {@see @method `TheWebSolver\Core\Admin\Onboarding\Wizard::init()`}.
+	 * @param string $src        (Optional) The child-class file source path.
+	 * @param string $name       (optional) The onboarding wizard child-class extending abstract class.
 	 *
 	 * @return Config|void Config instance in this namespace, die with WP_Error msg if namespace not declared or did't match.
 	 *
 	 * @since 1.0
 	 * @static
 	 */
-	public static function get( string $namespace, $src = '', string $name = '' ) {
+	public static function get( string $namespace, string $prefix, string $capability = 'manage_options', $src = '', string $name = '' ) {
 		static $config = false;
 
-		// Trim beginning slashes from namespace, if any, to exact match namespace.
-		$namespace = ltrim( $namespace, '\\' );
-		$error     = null;
-		$file      = basename( __FILE__ );
-		$dir       = dirname( __FILE__ );
-		$noncmsg   = __( 'Declare valid namespace', 'tws-onboarding' );
-		$matchmsg  = __( 'Add same namespace that is passed', 'tws-onboarding' );
-		$message   = sprintf(
-			'%1$s <b>%2$s</b>. %3$s <b>%4$s</b>.',
-			__( 'when instantiating <b>TheWebSolver_Onboarding_Wizard</b> at top of the file', 'tws-onboarding' ),
-			$file,
-			__( 'File is located inside plugin\'s directory', 'tws-onboarding' ),
-			$dir
-		);
+		$namespace = TheWebSolver_Onboarding_Wizard::validate( $namespace, $capability, true, __NAMESPACE__ );
 
-		// Die with not declared message. No cheating by passing empty string.
-		if ( 0 === strlen( $namespace ) ) {
-			$error = new WP_Error(
-				'namespace_not_declared',
-				__( 'Namespace is not declared for the Onboarding Wizard Configuration file.', 'tws-onboarding' ),
-				__( 'Namespace not declared', 'tws-onboarding' )
-			);
-			wp_die(
-				sprintf(
-					'<h1>%1$s</h1><p>%2$s</p><p>%3$s %4$s</p>',
-					esc_html( $error->get_error_data() ),
-					esc_html( $error->get_error_message() ),
-					esc_html( $noncmsg ),
-					wp_kses_post( $message )
-				),
-				esc_html( $error->get_error_data() )
-			);
-
-			return $error;
+		if ( is_wp_error( $namespace ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			wp_die( $namespace->get_error_message(), $namespace->get_error_data() );
 		}
 
-		// Die with no mach message.
-		if ( __NAMESPACE__ !== $namespace ) {
-			$error = new WP_Error(
-				'namespace_no_match',
-				__( 'Namespace did not match for the Onboarding Wizard Configuration file.', 'tws-onboarding' ),
-				__( 'Namespace Mismatch', 'tws-onboarding' )
-			);
+		if ( 'myplugin-prefix' === $prefix ) {
+			$title = __( 'Onboarding class prefix error', 'tws-onboarding' );
 			wp_die(
-				sprintf(
-					'<h1>%1$s</h1><p>%2$s</p><p>%3$s %4$s</p>',
-					esc_html( $error->get_error_data() ),
-					esc_html( $error->get_error_message() ),
-					esc_html( $matchmsg ),
-					wp_kses_post( $message )
+				wp_kses(
+					sprintf(
+						'<h1>%1$s</h1><p>%2$s.</p><p>%3$s.</p>',
+						$title,
+						__( 'Use your plugin\'s same unique prefix passed when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> class to the onboarding wizard child-class private method <code><b><em>Onboarding_Wizard::config()</em></b></code> to get the config instance', 'tws-onboarding' ),
+						__( 'Default prefix <b><em>"myplugin-prefix"</em></b> is being used', 'tws-onboarding' )
+					),
+					array(
+						'h1'   => array(),
+						'p'    => array(),
+						'b'    => array(),
+						'em'   => array(),
+						'code' => array(),
+					)
 				),
-				esc_html( $error->get_error_data() )
+				esc_html( $title )
 			);
-
-			return $error;
 		}
 
 		if ( ! is_a( $config, get_class() ) ) {
 			$config = new self();
 
-			// Prepare external child-class file, if given.
+			// Set onboarding prefix.
+			if ( '' !== $prefix ) {
+				$config->prefix = $prefix;
+			}
+
+			// Set onboarding capability.
+			$config->capability = $capability;
+
+			// Prepare external child-class file.
 			$config->child_file = $src;
 
-			// Set child-class name, if given, breaking namespace supplied.
+			// Set child-class name, breaking namespace supplied and just getting the class name.
 			$child_name         = explode( '\\', $name );
 			$config->child_name = array_pop( $child_name );
 		}

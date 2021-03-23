@@ -39,7 +39,6 @@ final class Config {
 	 * @var string
 	 *
 	 * @since 1.0
-	 * @todo Pass as a parameter to {@method `Config::set()`} and don't change it here directly.
 	 */
 	private $prefix = 'myplugin-prefix';
 
@@ -49,7 +48,6 @@ final class Config {
 	 * @var string Default is `manage_options` i.e. Admin Capability.
 	 *
 	 * @since 1.0
-	 * @todo Pass as a parameter to {@method `Config::set()`} and don't change it here directly.
 	 */
 	private $capability = 'manage_options';
 
@@ -78,7 +76,7 @@ final class Config {
 	 *
 	 * @since 1.0
 	 */
-	public function create_wizard() {
+	public function onboarding() {
 		// Prepare and instantiate external child-class, if valid.
 		$class = new stdClass();
 		if ( file_exists( $this->child_file ) && 0 < strlen( $this->child_name ) ) {
@@ -92,31 +90,17 @@ final class Config {
 
 		// Create onboarding wizard from external child-class, if instance of abstract class "Wizard".
 		if ( $class instanceof Wizard ) {
-			$onboarding = $class;
-		} else {
-			/**
-			 * New shiny wizard creation from internal child-class.
-			 *
-			 * @example usage
-			 * ```
-			 * // If no dependency needed, then use like this:
-			 * new Onboarding_Wizard();
-			 *
-			 * // If any dependency plugin needs to be installed on intro page, then use like this:
-			 *
-			 * // If WooCommerce is dependency, version to install is 4.5.0. Then args can be:
-			 * new Onboarding_Wizard( 'woocommerce', '', '4.5.0', $this->get_capability() );
-			 *
-			 * // If ACF is dependency, then args can be:
-			 * new Onboarding_Wizard( 'advanced-custom-fields', 'acf' );
-			 * ```
-			 * @todo Set necessary property values for the onboarding wizard.
-			 */
-			include_once __DIR__ . '/Includes/Wizard.php';
+			$onboarding = (object) $class; // Typecasting to disable method call errors.
 
-			// Using static method to get same config instance with config prefix.
-			Onboarding_Wizard::set_child_prefix( $this->prefix );
+			// Pass current config object if method exists in external child class.
+			if ( method_exists( $onboarding, 'set_config' ) && is_callable( array( $onboarding, 'set_config' ) ) ) {
+				$onboarding->set_config( $this );
+			}
+		} else {
+			// New shiny wizard creation from internal child-class.
+			include_once __DIR__ . '/Includes/Wizard.php';
 			$onboarding = new Onboarding_Wizard();
+			$onboarding->set_config( $this );
 		}
 
 		$onboarding->init();
@@ -127,7 +111,7 @@ final class Config {
 	/**
 	 * Determines whether plugin onboarding should run or not after plugin activation.
 	 *
-	 * NOTE: WITHOUT USING THIS, ONBOARDING WIZARD WILL NOT START.
+	 * NOTE: WITHOUT USING THIS, ONBOARDING WIZARD WILL NOT REDIRECT AFTER PLUGIN ACTIVATION.
 	 *
 	 * By default a filter is created to enable/disable onboarding.
 	 * Onboarding can then be turned off using this filter.
@@ -136,30 +120,52 @@ final class Config {
 	 * For eg. Saving an option during installation and checking whether that option exists.
 	 * This way it will make sure that it's a clean install before redirecting to onboarding.
 	 *
+	 * @param string[] $check Validation before redirecting wizard during plugin activation.
+	 *
 	 * @link https://developer.wordpress.org/reference/functions/register_activation_hook/
 	 * @since 1.0
 	 * @example usage
-	 * ### Lets assume below code is in file `activate.php` in your plugin.
 	 * ```
-	 * namespace My_Plugin\Core;
-	 * // Maybe you want to set namespace for onboarding files "Config.php" and "Includes/Wizard.php" same as in this file. i.e. "My_Plugin\Core".
-	 * // If that's the case, then it will be more easy to work on.
+	 * // Let's assume we are in main plugin file "myplugin.php"
 	 *
-	 * // For Now, lets assume it's different. So, first include the Onboarding Wizard main file like this:
+	 * // First include the Onboarding Wizard main file like this:
 	 * include_once 'my-plugin/path-to/tws-admin-onboarding.php';
-	 * // Here, lets assume namespace is "My_Plugin\Onboarding" in "Config.php" and "Includes/Wizard.php" file. NOTE: Namespace must be same in these two files.
+	 *
+	 * // Here, lets assume you want your onboarding namespace as "My_Plugin\Onboarding" and have already set it at top of "Config.php" and "Includes/Wizard.php" file.
+	 *
+	 * // NOTE: Namespace must be same in these two files. Default namespace is set as "My_Plugin\My_Feature" for "Config.php" and "Includes/Wizard.php" file. Replace it with "My_Plugin\Onboarding" in this case.
+	 *
+	 * // Lets instantiate the onboarding wizard.
 	 * $onboarding = new TheWebSolver_Onboarding_Wizard( 'My_Plugin\Onboarding' );
 	 *
 	 * // Use it with register activation hook like this:
-	 * register_activation_hook( __MY_PLUGIN_MAIN_FILE__, 'activate_function' );
+	 * register_activation_hook( __FILE__, 'activate_function' );
 	 * function activate_function() {
-	 * $onboarding->config()->enable_wizard();
+	 *  // Check if plugin is already installed.
+	 *  $old_install = get_option( 'myplugin_install_version', false );
+	 *
+	 *  // Success validation as initial value.
+	 *  $check = array( 'true' );
+	 *
+	 *  if ( ! $old_install ) {
+	 *   // Another true value if new install to enable onboarding page redirection.
+	 *   $check[] = 'true';
+	 *
+	 *   // Update the plugin installed version also.
+	 *   update_option( 'myplugin_install_version', '1.0' );
+	 *  } else {
+	 *   //  This check fails second time plugin is activated after deactivation as it's already been installed with version "1.0".
+	 *   $check[] = 'false';
+	 *  }
+	 *
+	 *  // Now onboarding will run on the basis of check parameter passed. This prevents enabling onboarding on each activation except first time.
+	 *  $onboarding->config()->enable_onboarding( $check );
 	 * }
 	 * ```
 	 * @todo Use this with function registered at activation hook.
 	 *       For more info: {@see function `register_activation_hook()`).
 	 */
-	public function enable_wizard() {
+	public function enable_onboarding( array $check ) {
 		/**
 		 * WPHOOK: Filter -> enable/disable onboarding redirect after plugin activation.
 		 *
@@ -183,16 +189,15 @@ final class Config {
 		 * ```
 		 */
 		$onboard_redirect = apply_filters( 'hzfex_enable_onboarding_redirect', true, $this->get_prefix() );
-		$is_new_install   = get_option( 'tws_woopas_installed_data', true );
 
-		if ( $is_new_install && $onboard_redirect ) {
+		if ( $onboard_redirect && ! in_array( 'false', $check, true ) ) {
 			set_transient( $this->get_prefix() . '_onboarding_redirect', 'yes', 30 );
 
 			/**
 			 * Use this option to conditionally show/hide admin notice (or anything else).
-			 * It's will be updated to `complete` only after the last step of the onboarding wizard.
+			 * It's will be updated to `complete` only at the last step of the onboarding wizard.
 			 */
-			update_option( $this->get_prefix() . '_onboarding_status', 'pending' );
+			update_option( $this->get_prefix() . '_onboarding_steps_status', 'pending' );
 		}
 	}
 
@@ -203,7 +208,7 @@ final class Config {
 	 * For eg. Check for WordPress and PHP versions, etc.
 	 *
 	 * @since 1.0
-	 * @todo Any conditional check before starting wizard can be done here.
+	 * @todo Use filter `hzfex_onboarding_check_before_redirect` for additional check before start.
 	 */
 	public function start_onboarding() {
 		// Only run on WordPress Admin.
@@ -211,7 +216,7 @@ final class Config {
 			return;
 		}
 
-		$this->create_wizard();
+		$this->onboarding();
 
 		/**
 		 * WPHOOK: Filter -> enable/disable onboarding redirect after plugin activation.
@@ -248,7 +253,7 @@ final class Config {
 		 * @example usage
 		 * ```
 		 * // Lets make some checks before onboarding redirection after plugin activation.
-		 * add_filter( 'hzfex_onboarding_check_before_start', 'start_onboarding', 10, 2 );
+		 * add_filter( 'hzfex_onboarding_check_before_redirect', 'start_onboarding', 10, 2 );
 		 * function start_onboarding( $check, $prefix ) {
 		 *  // Bail if not our onboarding wizard.
 		 *  if ( 'my-prefix' !== $prefix ) {
@@ -263,8 +268,9 @@ final class Config {
 		 *  return $check;
 		 * }
 		 * ```
+		 * @todo Use this filter for additional check before starting onboarding wizard.
 		 */
-		$check = apply_filters( 'hzfex_onboarding_check_before_start', array( 'true' ), $this->get_prefix() );
+		$check = apply_filters( 'hzfex_onboarding_check_before_redirect', array( 'true' ), $this->get_prefix() );
 
 		// Start onboarding wizard if everything seems new and shiny!!!
 		if (
@@ -301,7 +307,7 @@ final class Config {
 
 		// Once redirected, that's enough. Don't do it ever again.
 		delete_transient( $this->get_prefix() . '_onboarding_redirect' );
-		wp_safe_redirect( admin_url( 'index.php?page=' . $this->get_page() ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=' . $this->get_page() ) );
 		exit;
 	}
 
@@ -339,7 +345,6 @@ final class Config {
 	 * // To point to onboarding page, create URL like this.
 	 * admin_url( 'admin.php?page=' . Config::get_page() );
 	 * ```
-	 * @todo Use this to point to the onboarding page slug, where applicable.
 	 */
 	public function get_page() {
 		return $this->get_prefix() . '-onboarding-setup';
@@ -397,47 +402,24 @@ final class Config {
 	public static function get( string $namespace, string $prefix, string $capability = 'manage_options', $src = '', string $name = '' ) {
 		static $config = false;
 
-		$namespace = TheWebSolver_Onboarding_Wizard::validate( $namespace, $capability, true, __NAMESPACE__ );
+		$namespace = TheWebSolver_Onboarding_Wizard::validate( $namespace, $capability, $prefix, true, __NAMESPACE__ );
 
+		// Don't let bypassing config namespace error if config is instantiated directly.
 		if ( is_wp_error( $namespace ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			wp_die( $namespace->get_error_message(), $namespace->get_error_data() );
-		}
-
-		if ( 'myplugin-prefix' === $prefix ) {
-			$title = __( 'Onboarding class prefix error', 'tws-onboarding' );
-			wp_die(
-				wp_kses(
-					sprintf(
-						'<h1>%1$s</h1><p>%2$s.</p><p>%3$s.</p>',
-						$title,
-						__( 'Use your plugin\'s same unique prefix passed when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> class to the onboarding wizard child-class private method <code><b><em>Onboarding_Wizard::config()</em></b></code> to get the config instance', 'tws-onboarding' ),
-						__( 'Default prefix <b><em>"myplugin-prefix"</em></b> is being used', 'tws-onboarding' )
-					),
-					array(
-						'h1'   => array(),
-						'p'    => array(),
-						'b'    => array(),
-						'em'   => array(),
-						'code' => array(),
-					)
-				),
-				esc_html( $title )
-			);
 		}
 
 		if ( ! is_a( $config, get_class() ) ) {
 			$config = new self();
 
 			// Set onboarding prefix.
-			if ( '' !== $prefix ) {
-				$config->prefix = $prefix;
-			}
+			$config->prefix = $prefix;
 
 			// Set onboarding capability.
 			$config->capability = $capability;
 
-			// Prepare external child-class file.
+			// Set external child-class file.
 			$config->child_file = $src;
 
 			// Set child-class name, breaking namespace supplied and just getting the class name.

@@ -205,6 +205,8 @@ if ( ! class_exists( 'TheWebSolver' ) ) {
 		 * @param array  $args     Plugin information.
 		 * @param bool   $activate Whether to activate plugin after installation or not.
 		 *
+		 * @return bool True if plugin activated successfully, false otherwise.
+		 *
 		 * @throws Exception If unable to proceed with plugin installation.
 		 *
 		 * @since  2.6.0
@@ -332,7 +334,6 @@ if ( ! class_exists( 'TheWebSolver' ) ) {
 								admin_url( 'plugins.php' )
 							)
 						);
-						$active = false;
 					}
 				}
 			}
@@ -410,7 +411,7 @@ if ( ! class_exists( 'TheWebSolver' ) ) {
 				return $plugin;
 			}
 
-			return true;
+			return property_exists( $info, 'name' ) ? $info->name : true;
 		}
 
 		/**
@@ -677,6 +678,23 @@ if ( ! class_exists( 'TheWebSolver' ) ) {
 		 */
 		public static function get_template_path() {
 			return apply_filters( 'hzfex_default_tempate_path', 'thewebsolver/' );
+		}
+
+		/**
+		 * Gets the directory URL of a given file.
+		 *
+		 * @param string $file   Typically passed as `__FILE__`.
+		 * @param bool   $levels The number of parent directories to go up.
+		 *                       If `0`, it will get URL to `$file` directory.
+		 *                       If `greater than 0`, it will get URL to `$file` directory's parent directory with given level up.
+		 *
+		 * @return string
+		 *
+		 * @since 1.0
+		 */
+		public static function get_plugin_dir_url( $file, $levels = 0 ) {
+			$path = 0 === $levels ? $file : dirname( $file, absint( $levels ) );
+			return trailingslashit( plugins_url( '', $path ) );
 		}
 	} // Class end.
 }

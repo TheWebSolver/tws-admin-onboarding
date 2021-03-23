@@ -199,12 +199,27 @@ abstract class Wizard {
 	protected $logo;
 
 	/**
+	 * Reset onboarding wizard options.
+	 *
+	 * All keys for options reset are:
+	 * * `dependency_name`
+	 * * `dependency_status`
+	 * * `recommended_status`
+	 * * `recommended_checked_status`
+	 *
+	 * @var bool[]
+	 *
+	 * @since 1.0
+	 */
+	protected $reset = array();
+
+	/**
 	 * Onboarding constructor.
 	 *
 	 * @since 1.0
 	 */
 	public function __construct() {
-		$this->title = __( 'TheWebSolver &rsaquo; Onboarding', 'tws-onboarding' );
+		// Everything happens at `init`. Always call `init` after initializing class!!!
 	}
 
 	/**
@@ -218,9 +233,12 @@ abstract class Wizard {
 	 * The dependency plugin status will be saved with Options API
 	 * with key {`$this->prefix . '_onboarding_dependency_status'`}.
 	 * So it is not possible to change it once set after plugin activation.
-	 * To change dependency `param`, delete above option key
-	 * (maybe with plugin deactivation/uninstall hook) first.
+	 * To change dependency `param`, you need to reset key by:
+	 * * deleting above option key with `delete_option()` at plugin deactivation/uninstall hook & deactivating/reinstalling plugin.
+	 * * setting `$this->reset['dependency_name'] = true` & `$this->reset['dependency_status'] = true` and visiting `ready` step. To know more: {@see @method `Wizard::reset()`}.
+	 * * manually deleting above key by any other means (maybe directly from database).
 	 *
+	 * Following properties are to be set in this method.
 	 * * @param string `$slug`     The plugin's slug on WordPress repository (aka directory name).
 	 * * @param string `$filename` The plugin's main file name.
 	 *                             Only needed if different than `$slug`.
@@ -281,7 +299,9 @@ abstract class Wizard {
 	 *
 	 * @since 1.0
 	 */
-	protected function set_title() {}
+	protected function set_title() {
+		$this->title = __( 'TheWebSolver &rsaquo; Onboarding', 'tws-onboarding' );
+	}
 
 	/**
 	 * Sets user capability to run onboarding wizard.
@@ -555,7 +575,7 @@ abstract class Wizard {
 				</h1>
 			<?php endif; ?>
 			<?php if ( 'introduction' === $this->get_step() ) : ?>
-				<a href="<?php echo esc_url( add_query_arg( 'onboarding', 'introduction', admin_url() ) ); ?>" class="button button-large hz_dyn_btn">← <?php esc_html_e( 'Dashboard', 'tws-onboarding' ); ?></a>
+				<a href="<?php echo esc_url( add_query_arg( 'onboarding', 'introduction', admin_url() ) ); ?>" class="button button-large hz_dyn_btn onboarding_dashboard_btn">← <?php esc_html_e( 'Dashboard', 'tws-onboarding' ); ?></a>
 			<?php endif; ?>
 			</header>
 			<!-- #onboarding_header -->
@@ -651,9 +671,9 @@ abstract class Wizard {
 			<!-- footer -->
 			<footer id="footer">
 				<a
-				class="onboarding-return"
+				class="onboarding-return onboarding_dashboard_btn button"
 				href="<?php echo esc_url( admin_url() ); ?>">
-					<?php esc_html_e( 'Return to the WordPress Dashboard', 'tws-onboarding' ); ?>
+					← <?php esc_html_e( 'Return to Dashboard', 'tws-onboarding' ); ?>
 				</a>
 			</footer>
 			<!-- #footer -->
@@ -758,15 +778,16 @@ abstract class Wizard {
 			exit( wp_kses_post( $msg ) );
 		}
 
-		if ( ! class_exists( '\TheWebSolver' ) ) {
-			include_once HZFEX_WOO_PAS_PATH . 'thewebsolver.php';
+		$tws_file = trailingslashit( $this->path ) . 'thewebsolver.php';
+		if ( ! class_exists( '\TheWebSolver' ) && file_exists( $tws_file ) ) {
+			include_once $tws_file;
 		}
 
 		// Start installation. Suppress feedback.
 		ob_start();
 
 		// NOTE: Sometime installation may throw "An unexpected error occurred" WordPress warning. Shows in debug.log file.
-		// Also, plugin activation triggers Ajax in an infinite loop. So, $activate => false.
+		// Also, plugin activation triggers Ajax in an infinite loop without activation. So, $activate => false.
 		$response = TheWebSolver::maybe_install_plugin( $this->slug, $this->filename, $this->version, false );
 
 		// Discard feedback.
@@ -836,7 +857,8 @@ abstract class Wizard {
 		/**
 		 * WPHOOK: Filter -> default recommended plugin contents.
 		 *
-		 * @param array $content `title` and `desc` content.
+		 * @param array  $content `title` and `desc` content.
+		 * @param string $prefix   The onboarding prefix.
 		 *
 		 * @var array
 		 *
@@ -860,42 +882,43 @@ abstract class Wizard {
 			<fieldset id="onboarding-recommended-plugins">
 
 				<?php
-				$is_all_active = array();
+				// Get all recommended plugins active status.
+				$plugins_status = get_option( $this->prefix . '_get_onboarding_recommended_plugins_status', array() );
+
+				// Get all recommended plugins checked status.
+				$plugins_checked = get_option( $this->prefix . '_get_onboarding_recommended_plugins_checked_status', array() );
+
 				foreach ( $this->recommended as $plugin ) :
-					$slug   = $plugin['slug'];
-					$file   = isset( $plugin['file'] ) ? $plugin['file'] : $slug;
-					$file   = $file . '.php';
-					$base   = $slug . '/' . $file;
+					$slug = $plugin['slug'];
+					$file = isset( $plugin['file'] ) ? $plugin['file'] : $slug;
+					$file = $file . '.php';
+					$base = $slug . '/' . $file;
+
+					// Get current installed status (maybe deleted outside the scope of onboarding).
 					$exists = TheWebSolver::maybe_plugin_is_installed( $base );
 
-					/**
-					 * Recommended plugin's active status when attempted to install and activate.
-					 *
-					 * @var string
-					 */
-					$was_active = get_option( $this->prefix . '_get_onboarding_active_status_of_' . $slug, 'false' );
-
-					// Get current activated status (maybe activated outside the scope of onboarding).
+					// Get current activated status (maybe activated/deactivated outside the scope of onboarding).
 					$is_active = $this->get_active_status( $base );
 
-					// Save the plugin activation status if any difference in it's status.
-					if ( $was_active !== $is_active ) {
-						update_option( $this->prefix . '_get_onboarding_active_status_of_' . $slug, $is_active );
+					// Previous state of all recommended plugins.
+					$plugins_status[ $slug ]  = isset( $plugins_status[ $slug ] ) ? $plugins_status[ $slug ] : 'false';
+					$plugins_checked[ $slug ] = isset( $plugins_checked[ $slug ] ) ? $plugins_checked[ $slug ] : 'yes';
+
+					// Set current plugin's current active status if any difference in it's status.
+					if ( $plugins_status[ $slug ] !== $is_active ) {
+						$plugins_status[ $slug ] = $is_active;
 					}
 
-					// Recommended plugin deleted/not-installed, set "checked" => "yes".
+					// Recommended plugin deleted/not-installed, force set "checked" => "yes".
 					if ( ! $exists ) {
-						update_option( $this->prefix . '_onboarding_enable_recommended_' . $slug, 'yes' );
+						$plugins_checked[ $slug ] = 'yes';
 					}
 
-					// Get the actual active status for current plugin.
-					$plugin['status'] = get_option( $this->prefix . '_get_onboarding_active_status_of_' . $slug, 'false' );
+					// Set actual active status of current plugin.
+					$plugin['status'] = $plugins_status[ $slug ];
 
-					// Get active status of all recommended plugin.
-					$is_all_active[ $slug ] = $plugin['status'];
-
-					// Get the status of checkbox being checked or not.
-					$plugin['checked'] = get_option( $this->prefix . '_onboarding_enable_recommended_' . $slug, 'yes' );
+					// Set actual checked status of current plugin.
+					$plugin['checked'] = $plugins_checked[ $slug ];
 					?>
 
 					<div class="hz_control_field">
@@ -904,29 +927,28 @@ abstract class Wizard {
 					<?php
 				endforeach;
 
+				update_option( $this->prefix . '_get_onboarding_recommended_plugins_status', $plugins_status );
+				update_option( $this->prefix . '_get_onboarding_recommended_plugins_checked_status', $plugins_checked );
+
 				// Set the button text accordingly.
-				if ( in_array( 'false', $is_all_active, true ) ) {
+				if ( in_array( 'false', $plugins_status, true ) ) {
 					$text = __( 'Save & Continue', 'tws-onboarding' );
 				}
 				?>
 
 			</fieldset>
-			<?php if ( in_array( 'false', $is_all_active, true ) ) : ?>
-				<!-- contents will be added from "onboarding.js" -->
+			<?php if ( in_array( 'false', $plugins_status, true ) ) : ?>
+				<!-- onboarding-recommended-info contents will be added from "onboarding.js" -->
 				<div class="onboarding-recommended-info hz_flx column center">
 					<p class="label"><span class="count"></span><span class="suffix"></span></p>
 					<p id="onboarding-recommended-names"></p>
 				</div>
 				<!-- .onboarding-recommended-info -->
-			<?php endif; ?>
-			<!-- onboarding-actions -->
-			<fieldset class="onboarding-actions step <?php esc_attr( $this->get_step() ); ?> hz_flx column center">
-				<a href="<?php echo esc_url( $this->get_previous_step_link() ); ?>" class="button button-large button-prev hz_btn__prev hz_btn__prim">← <?php esc_html_e( 'Previous Step', 'tws-onboarding' ); ?></a>
-				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next hz_btn__skip"><?php esc_html_e( 'Skip this Step', 'tws-onboarding' ); ?></a>
-				<input type="submit" class="button-primary button button-large button-next hz_btn__prim" value="<?php echo esc_html( $text ); ?> →" name="save_step" />
-				<?php wp_nonce_field( 'hzfex-onboarding' ); ?>
-			</fieldset>
-			<!-- .onboarding-actions -->
+				<?php
+			endif;
+				$this->get_step_buttons( true, true, true, $text );
+			?>
+
 		</form>
 		<?php
 	}
@@ -937,17 +959,23 @@ abstract class Wizard {
 	 * @since 1.0
 	 */
 	protected function recommended_save() {
-		check_admin_referer( 'hzfex-onboarding' );
+		$this->validate_save();
+
+		// Get all recommended plugins checked status.
+		$plugins_checked = get_option( $this->prefix . '_get_onboarding_recommended_plugins_checked_status', array() );
 
 		foreach ( $this->recommended as $plugin ) {
 			$slug = $plugin['slug'];
 			$file = isset( $plugin['file'] ) ? $plugin['file'] : $slug;
 
-			if ( ! isset( $_POST[ 'onboarding-' . $slug ] ) || 'yes' !== $_POST[ 'onboarding-' . $slug ] ) {
-				// Add option to reflect checkbox checked state for recommended plugin.
-				update_option( $this->prefix . '_onboarding_enable_recommended_' . $slug, 'no' );
+			if ( ! isset( $_POST[ 'onboarding-' . $slug ] ) || 'yes' !== $_POST[ 'onboarding-' . $slug ] ) { // phpcs:ignore WordPress.Security.NonceVerification
+				// Set checkbox as not checked for current plugin.
+				$plugins_checked[ $slug ] = 'no';
 				continue;
 			}
+
+			// Set checkbox as checked for current plugin.
+			$plugins_checked[ $slug ] = 'yes';
 
 			$this->install_plugin(
 				$slug,
@@ -960,6 +988,9 @@ abstract class Wizard {
 			);
 		}
 
+		// Finally, update the recommended plugins checked status from checkbox (toggle btn) checked state.
+		update_option( $this->prefix . '_get_onboarding_recommended_plugins_checked_status', $plugins_checked );
+
 		wp_safe_redirect( esc_url_raw( $this->get_next_step_link() ) );
 		exit;
 	}
@@ -968,11 +999,13 @@ abstract class Wizard {
 	 * Recommended plugins display.
 	 *
 	 * @param array $data The plugin data in an array.
-	 * * `string` `slug`  - The plugin slug.
-	 * * `string` `title` - The plugin title/name.
-	 * * `string` `desc`  - The plugin description.
-	 * * `string` `logo`  - The plugin logo URL.
-	 * * `string` `alt`   - The plugin logo alt text.
+	 * * `string` `slug`    - The plugin slug.
+	 * * `string` `title`   - The plugin title/name.
+	 * * `string` `desc`    - The plugin description.
+	 * * `string` `logo`    - The plugin logo URL.
+	 * * `string` `alt`     - The plugin logo alt text.
+	 * * `string` `status`  - The plugin active status.
+	 * * `string` `checked` - The plugin checked state.
 	 *
 	 * @since 1.0
 	 */
@@ -1000,6 +1033,7 @@ abstract class Wizard {
 				value="yes"
 				data-plugin="<?php echo esc_attr( wp_json_encode( $args ) ); ?>"
 				data-active="<?php echo esc_attr( $status ); ?>"
+				data-control="switch"
 				<?php
 				if ( 'true' === $status ) :
 					echo 'disabled="disabled"';
@@ -1024,22 +1058,122 @@ abstract class Wizard {
 	}
 
 	/**
+	 * Resets (deletes) options added during onboarding.
+	 * ------------------------------------------------------------------------------
+	 * It will not delete options that are saved on child-class onboarding steps.\
+	 * It will only delete options saved for onboarding wizard purpose.
+	 * ------------------------------------------------------------------------------
+	 *
+	 * By default, it is set to an empty array. i.e. onboarding options will not be deleted by default.\
+	 * If `$this->reset` array values are passed as an exmaple below, then following options will be deleted.
+	 * * ***$this->prefix . '_onboarding_dependency_status'***
+	 * * ***$this->prefix . '_onboarding_dependency_name'***
+	 * * ***$this->prefix . '_get_onboarding_recommended_plugins_status'***
+	 * * ***$this->prefix . '_get_onboarding_recommended_plugins_checked_status'***.
+	 *
+	 * @since 1.0
+	 * @example usage
+	 * ```
+	 * namespace My_Plugin\My_Feature;
+	 * use TheWebSolver\Core\Admin\Onboarding\Wizard;
+	 *
+	 * // Lets assume our child-class is `Onboarding_Wizard` in above namespace.
+	 * class Onboarding_Wizard extends Wizard {
+	 *  protected function reset() {
+	 *   // Lets keep some options and delete some options. Just pass true/false for following.
+	 *   // true will delete option, false will not.
+	 *   $this->reset = array(
+	 *    'dependency_name'            => true,
+	 *    'dependency_status'          => true,
+	 *    'recommended_status'         => false,
+	 *    'recommended_checked_status' => true,
+	 *   );
+	 *  }
+	 * }
+	 * ```
+	 */
+	protected function reset() {}
+
+	/**
 	 * Sets onboarding final step.
 	 *
 	 * @since 1.0
 	 */
 	protected function final_step() {
+		$this->reset();
+
+		if ( isset( $this->reset['dependency_status'] ) && $this->reset['dependency_status'] ) {
+			delete_option( $this->prefix . '_onboarding_dependency_status' );
+		}
+
+		if ( isset( $this->reset['dependency_name'] ) && $this->reset['dependency_name'] ) {
+			delete_option( $this->prefix . '_onboarding_dependency_name' );
+		}
+
+		if ( isset( $this->reset['recommended_status'] ) && $this->reset['recommended_status'] ) {
+			delete_option( $this->prefix . '_get_onboarding_recommended_plugins_status' );
+		}
+
+		if ( isset( $this->reset['recommended_checked_status'] ) && $this->reset['recommended_checked_status'] ) {
+			delete_option( $this->prefix . '_get_onboarding_recommended_plugins_checked_status' );
+		}
+
+		/**
+		 * Update onboarding steps status option set during plugin activation to `complete`.
+		 *
+		 * @see {@method `Config::enable_onboarding()`}
+		 */
+		update_option( $this->prefix . '_onboarding_steps_status', 'complete' );
+
+		/**
+		 * WPHOOK: Action -> Fires before final step contents.
+		 *
+		 * This hook can be used for additional tasks at final step
+		 * such as activation of dependency plugin, updating/deleting options.
+		 *
+		 * @param string $prefix The onboarding prefix.
+		 *
+		 * @since 1.0
+		 */
+		do_action( 'hzfex_onboarding_before_final_step_contents', $this->prefix );
+
+		$title = __( 'Onboarding Wizard Completed Successfully!', 'tws-onboarding' );
+		$desc  = __( 'Onboarding wizard is complete. Your plugin is now ready!', 'tws-onboarding' );
+
+		/**
+		 * WPHOOK: Filter -> Onboarding ready step contents.
+		 *
+		 * @param array  $content The onboarding final step contents.
+		 * @param string $prefix The onboarding prefix.
+		 *
+		 * @var array $content Onboarding ready step content.
+		 *
+		 * @since 1.0
+		 */
+		$content = apply_filters(
+			'hzfex_onboarding_wizard_ready',
+			array(
+				'title' => $title,
+				'desc'  => $desc,
+			),
+			$this->prefix
+		);
 		?>
-		<div class="onboarding_done">
-			<h1><?php esc_html_e( 'Ready with WooCommerce Attributes!', 'tws-onboarding' ); ?></h1>
+
+		<div class="onboarding_complete">
+			<h1><?php echo esc_html( $content['title'] ); ?></h1>
+			<p class="onboarding_complete_content"><?php echo wp_kses_post( $content['desc'] ); ?></p>
 		</div>
 
-		<div class="onboarding-actions step <?php esc_attr( $this->get_step() ); ?> hz_flx column center">
-			<a href="<?php echo esc_url( $this->get_previous_step_link() ); ?>" class="button button-large button-prev hz_btn__prev hz_btn__prim">← <?php esc_html_e( 'Previous Step', 'tws-onboarding' ); ?></a>
-			<a class="button button-primary" href="<?php echo esc_url( admin_url() ); ?>"><?php esc_html_e( 'Visit Dashboard', 'tws-onboarding' ); ?></a>
-			<a class="button" href="<?php echo esc_url( admin_url() ); ?>"><?php esc_html_e( 'More Settings', 'tws-onboarding' ); ?></a>
-		</div>
 		<?php
+		/**
+		 * WPHOOK: Action -> Fires at final step action button wrapper.
+		 *
+		 * @param string $prefix The onboarding prefix.
+		 *
+		 * @since 1.0
+		 */
+		do_action( 'hzfex_onboarding_after_final_step_contents', $this->prefix );
 	}
 
 	/**
@@ -1089,10 +1223,13 @@ abstract class Wizard {
 	public function run_deferred_actions() {
 		$this->close_http_connection();
 
+		// Get all recommended plugins active status.
+		$plugins_status = get_option( $this->prefix . '_get_onboarding_recommended_plugins_status', array() );
+
 		// Iterate over deferred actions and run them one by one at shutdown.
 		foreach ( $this->deferred_actions as $action ) {
 			// Call TheWebSolver::silent_plugin_installer() and it's args.
-			call_user_func_array( $action['func'], $action['args'] );
+			$response = call_user_func_array( $action['func'], $action['args'] );
 
 			if (
 				isset( $action['func'][1] ) &&
@@ -1110,7 +1247,7 @@ abstract class Wizard {
 				delete_option( $this->prefix . '_silent_installing_' . $action['args'][0] );
 
 				/**
-				 * Delete activation status of recommended plugin.
+				 * Set activation status of recommended plugin.
 				 *
 				 * This is to prevent being stuck on active status
 				 * even though the plugin may have been
@@ -1118,9 +1255,12 @@ abstract class Wizard {
 				 *
 				 * {@see @method `Wizard::recommended_view()`}
 				 */
-				delete_option( $this->prefix . '_get_onboarding_active_status_of_' . $action['args'][0] );
+				$plugins_status[ $action['args'][0] ] = true === $response ? 'true' : 'false';
 			}
 		}
+
+		// Finally, update the recommended plugins active status from callback response.
+		update_option( $this->prefix . '_get_onboarding_recommended_plugins_status', $plugins_status );
 	}
 
 	/**
@@ -1266,13 +1406,15 @@ abstract class Wizard {
 	/**
 	 * Gets onboarding step action buttons.
 	 *
-	 * @param bool $prev The previous step button.
-	 * @param bool $next The next step button.
-	 * @param bool $skip The skip step button.
+	 * @param bool   $prev        The previous step button.
+	 * @param bool   $next        The next step button.
+	 * @param bool   $skip        The skip step button.
+	 * @param string $submit_text The submit button text.
 	 *
 	 * @since 1.0
 	 */
-	public function get_step_buttons( $prev = false, $next = true, $skip = true ) {
+	public function get_step_buttons( $prev = false, $next = true, $skip = true, $submit_text = '' ) {
+		$submit = '' === $submit_text ? __( 'Save & Continue' ) : $submit_text;
 		?>
 		<!-- onboarding-actions -->
 		<fieldset class="onboarding-actions step <?php echo esc_attr( $this->get_step() ); ?> hz_flx column center">
@@ -1283,7 +1425,7 @@ abstract class Wizard {
 				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next hz_btn__skip hz_btn__nav"><?php esc_html_e( 'Skip this Step', 'tws-onboarding' ); ?></a>
 			<?php endif; ?>
 			<?php if ( $next ) : ?>
-				<input type="submit" class="button-primary button button-large button-next hz_btn__prim" value="<?php esc_attr_e( 'Save & Continue', 'tws-onboarding' ); ?> →" />
+				<input type="submit" class="button-primary button button-large button-next hz_btn__prim" value="<?php echo esc_attr( $submit ); ?> →" />
 				<?php
 				wp_nonce_field( 'hzfex-onboarding' );
 

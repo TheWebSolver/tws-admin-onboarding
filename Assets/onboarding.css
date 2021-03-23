@@ -1,5 +1,6 @@
 /**
- * Onboarding Stylesheet.
+ * The Web Solver Onboarding Stylesheet.
+ *
  * -----------------------------------
  * DEVELOPED-MAINTAINED-SUPPPORTED BY
  * -----------------------------------
@@ -149,7 +150,7 @@ header,
 .onboarding_steps {
   z-index: 999999;
 }
-header a.button {
+.onboarding_dashboard_btn {
   padding: 12px 20px;
   background: var(--primary-focus);
   margin-left: 20px;
@@ -157,20 +158,28 @@ header a.button {
   text-align: center;
   color: var(--light-gray-bold);
   transition: all 0.3s ease-in-out;
+	border-radius: 999px;
+	min-width: 150px;
 }
-header a.button:hover {
+.onboarding_dashboard_btn:hover {
   background: var(--primary);
 }
 .steps_wrapper {
   margin: 0;
 }
-.onboarding_content {
+.onboarding_content, #footer {
   max-width: 800px;
   margin: auto;
   /* background-color: var(--dark-alt); */
   border-radius: 10px;
   padding: 30px;
   overflow: hidden;
+}
+#footer {
+	margin-top: 50px;
+}
+#footer .onboarding_dashboard_btn {
+	display: block;
 }
 .onboarding_image_wrapper {
   text-align: center;
@@ -610,6 +619,9 @@ span.option_notice.success {
   margin-bottom: 20px;
   border: 3px solid var(--dark-alt);
   border-radius: 10px;
+}
+.hz_card_info .radio_option_image img {
+	max-width: 150px;
 }
 .hz_card_control input + .hz_card_info {
   position: relative;

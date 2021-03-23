@@ -3,6 +3,7 @@
  * The Web Solver Onboarding Wizard Initialization.
  * Boilerplate child-class to extend onboarding wizard class.
  *
+ * @todo Set the wizard namespace.
  * @todo Make changes where applicable.
  *
  * @package TheWebSolver\Core\Admin\Onboarding\Class
@@ -30,47 +31,104 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Onboarding Wizard configuration.
  *
- * {@see @method Config::create_wizard()}
+ * {@see @method Config::onboarding()}
  *
  * This extends the main Wizard class.
  * Use this as a boilerplate for creating own onboarding wizard.
  */
 class Onboarding_Wizard extends Wizard {
 	/**
-	 * Onboarding prefix.
+	 * Onboarding config instance.
 	 *
-	 * @var string
+	 * @var object
 	 */
-	private static $child_prefix;
+	private $config;
 
 	/**
-	 * Sets child class prefix.
+	 * Sets an instance of Config in this namespace.
 	 *
-	 * @param string $prefix Will be set from Config file.
+	 * @param object $instance The onboarding config instance.
 	 */
-	public static function set_child_prefix( $prefix ) {
-		self::$child_prefix = $prefix;
+	public function set_config( $instance ) {
+		$this->config = $instance;
 	}
 
 	/**
 	 * Gets the wizard config instance.
 	 *
 	 * @return Config
-	 *
-	 * @todo Set the same prefix parameter here for
-	 *       {@method `Config::get()`} when instantiating wizard.
-	 *       {@see @method `TheWebSolver_Onboarding_Wizard::__construct()`}
-	 *       Do not use the default `myplugin-prefix` here. Otherwise, wp_die() happens.
 	 */
 	private function config() {
-		return Config::get( __NAMESPACE__, self::$child_prefix );
+		return $this->config;
+	}
+
+	/**
+	 * Resets (deletes) options added during onboarding.
+	 * ------------------------------------------------------------------------------
+	 * It will not delete options that are saved on child-class onboarding steps.\
+	 * It will only delete options saved for onboarding wizard purpose.
+	 * ------------------------------------------------------------------------------
+	 *
+	 * By default, it is set to an empty array. i.e. onboarding options will not be deleted by default.\
+	 * If `$this->reset` array values are passed as an exmaple below, then following options will be deleted.
+	 * * ***$this->prefix . '_onboarding_dependency_status'***
+	 * * ***$this->prefix . '_onboarding_dependency_name'***
+	 * * ***$this->prefix . '_get_onboarding_recommended_plugins_status'***
+	 * * ***$this->prefix . '_get_onboarding_recommended_plugins_checked_status'***.
+	 *
+	 * @example usage
+	 * ```
+	 * namespace My_Plugin\My_Feature;
+	 * use TheWebSolver\Core\Admin\Onboarding\Wizard;
+	 *
+	 * // Lets assume our child-class is `Onboarding_Wizard` in above namespace.
+	 * class Onboarding_Wizard extends Wizard {
+	 *  protected function reset() {
+	 *   // Lets keep some options and delete some options. Just pass true/false for following.
+	 *   // true will delete option, false will not.
+	 *   $this->reset = array(
+	 *    'dependency_name'            => true,
+	 *    'dependency_status'          => true,
+	 *    'recommended_status'         => false,
+	 *    'recommended_checked_status' => true,
+	 *   );
+	 *  }
+	 * }
+	 * ```
+	 * @todo Set option to be deleted to `true`.
+	 * @inheritDoc
+	 */
+	protected function reset() {
+		// Every option is set to false here so nothing gets deleted.
+		// true will delete option, false will not.
+		$this->reset = array(
+			'dependency_name'            => false,
+			'dependency_status'          => false,
+			'recommended_status'         => false,
+			'recommended_checked_status' => false,
+		);
 	}
 
 	/**
 	 * Sets dependency plugin args (use this if need to install required plugin at first step).
+
+	 * @example usage
+	 * ```
+	 * namespace My_Plugin\My_Feature;
+	 * use TheWebSolver\Core\Admin\Onboarding\Wizard;
 	 *
-	 * @inheritDoc
+	 * // Lets assume our child-class is `Onboarding_Wizard` in above namespace.
+	 * class Onboarding_Wizard extends Wizard {
+	 *  protected function set_dependency() {
+	 *   // Lets make Advanced Custom Fields plugin as a required dependency plugin.
+	 *   $this->slug     = 'advanced-custom-fields';
+	 *   $this->filename = 'acf'; // Filename different from slug, so include.
+	 *   $this->version  = '5.9.4'; // Not needed if latest to install. Can be: '5.9.0', '5.8.8' etc.
+	 *  }
+	 * }
+	 * ```
 	 * @todo Set your own dependency plugin data. If not needed, delete this method.
+	 * @inheritDoc
 	 */
 	protected function set_dependency() {
 		$this->slug     = 'woocommerce';
@@ -84,7 +142,7 @@ class Onboarding_Wizard extends Wizard {
 	 * @inheritDoc
 	 */
 	protected function set_prefix() {
-		$this->prefix = self::$child_prefix;
+		$this->prefix = $this->config()->get_prefix();
 	}
 
 	/**
@@ -117,8 +175,8 @@ class Onboarding_Wizard extends Wizard {
 	/**
 	 * Sets onboarding HTML head title.
 	 *
-	 * @inheritDoc
 	 * @todo Change your onboarding title.
+	 * @inheritDoc
 	 */
 	protected function set_title() {
 		$this->title = __( 'MyPlugin Onboarding', 'tws-onboarding' );
@@ -136,8 +194,8 @@ class Onboarding_Wizard extends Wizard {
 	/**
 	 * Sets onboarding logo.
 	 *
-	 * @inheritDoc
 	 * @todo Set your own onboarding logo args.
+	 * @inheritDoc
 	 */
 	protected function set_logo() {
 		$this->logo = array(
@@ -152,11 +210,11 @@ class Onboarding_Wizard extends Wizard {
 	/**
 	 * Onboarding steps.
 	 *
-	 * @inheritDoc
 	 * @todo Set your own onboarding steps.
 	 *       `Introduction`, `Recommended` and `Ready` steps are default will be handled automatically.
-	 *       These default steps have filters to change the contents
+	 *       These default steps have filters to change the contents.
 	 *       and those filters will be displayed on respective step page.
+	 * @inheritDoc
 	 */
 	protected function set_steps() {
 		$steps = array(
@@ -180,11 +238,11 @@ class Onboarding_Wizard extends Wizard {
 	/**
 	 * Set the recommended plugins.
 	 *
-	 * @inheritDoc
 	 * @todo Manage recommended plugins. Each plugin will be installed and activated on recommended step.
 	 *       There will be enable/disbale option whether or not to intall the recommended plugin.
 	 *       As an example, 5 plugins as set as recommended plugins.
-	 *       If no recommended plugin is given, then the recommended step will not be shown.
+	 *       If don't have any recommended plugin, delete this method.
+	 * @inheritDoc
 	 */
 	protected function set_recommended_plugins() {
 		$plugins = array(
@@ -231,7 +289,7 @@ class Onboarding_Wizard extends Wizard {
 	}
 
 	/**
-	 * Displays General Settings options.
+	 * Displays `general` step options.
 	 */
 	public function text_checkbox_view() {
 		$text     = get_option( 'myprefix_simple_input_value', 'Example text default value' );
@@ -259,22 +317,22 @@ class Onboarding_Wizard extends Wizard {
 							<span class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this checkbox input field in order for switcher toggle control to work. If structure is different, then toggle button will not be created and default checkbox will be displayed.', 'tws-onboarding' ); ?></span>
 							<span class="option_notice alert desc"><?php esc_html_e( 'Alert: switcher control won\'t work if not used this same elements.', 'tws-onboarding' ); ?></span>
 						</span>
-						<input type="checkbox" class="hz_checkbox_input" id="checkbox_field" name="checkbox_field" class="hz_checkbox_input" <?php checked( $checkbox, 'on', true ); ?>>
+						<input type="checkbox" class="hz_checkbox_input" id="checkbox_field" name="checkbox_field" class="hz_checkbox_input" data-control="switch" <?php checked( $checkbox, 'on', true ); ?>>
 						<span class="hz_switcher"></span>
 					</label>
 				</p>
 			</fieldset>
 			<!-- contents end -->
-			<?php $this->get_step_buttons(); ?>
+			<?php $this->get_step_buttons(); // MUST USE THIS FOR NONCE AND SAVING THIS STEP DATA. ?>
 		</form>
 		<?php
 	}
 
 	/**
-	 * Saves General Settings options.
+	 * Saves `general` step options.
 	 */
 	public function text_checkbox_save() {
-		$this->validate_save();
+		$this->validate_save(); // MUST USE THIS FOR NONCE VERIFICATION.
 
 		$options = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
 
@@ -292,7 +350,7 @@ class Onboarding_Wizard extends Wizard {
 	}
 
 	/**
-	 * Displays Front Page Setting Options.
+	 * Displays `front` step Options.
 	 */
 	public function radio_select_form_view() {
 		$radio  = get_option( 'myprefix_radio_input', 'second_option' );
@@ -308,7 +366,7 @@ class Onboarding_Wizard extends Wizard {
 				<ul class="hz_card_control">
 					<li class="hz_card_control_wrapper">
 						<label for="radio_input_first" class="hz_card_control">
-							<input id="radio_input_first" type="radio" name="radio_input" class="hz_card_control" data-type="card" value="first_option" <?php checked( $radio, 'first_option' ); ?>>
+							<input id="radio_input_first" type="radio" name="radio_input" class="hz_card_control" data-control="card" value="first_option" <?php checked( $radio, 'first_option' ); ?>>
 							<div class="hz_card_info hz_flx row center">
 								<div class="radio_option_content">
 									<p><?php esc_html_e( 'Radio input first option', 'tws-onboarding' ); ?></p>
@@ -331,7 +389,7 @@ class Onboarding_Wizard extends Wizard {
 					</li>
 					<li class="hz_card_control_wrapper">
 						<label for="radio_input_second" class="hz_card_control">
-							<input id="radio_input_second" type="radio" name="radio_input" class="hz_card_control" data-type="card" value="second_option" <?php checked( $radio, 'second_option' ); ?>>
+							<input id="radio_input_second" type="radio" name="radio_input" class="hz_card_control" data-control="card" value="second_option" <?php checked( $radio, 'second_option' ); ?>>
 							<div class="hz_card_info hz_flx row center">
 								<div class="radio_option_content">
 									<p><?php esc_html_e( 'Radio input second option', 'tws-onboarding' ); ?></p>
@@ -367,16 +425,16 @@ class Onboarding_Wizard extends Wizard {
 			</fieldset>
 			<!-- contents end -->
 
-			<?php $this->get_step_buttons( true ); ?>
+			<?php $this->get_step_buttons( true ); // MUST USE THIS FOR NONCE AND SAVING THIS STEP DATA. ?>
 		</form>
 		<?php
 	}
 
 	/**
-	 * Saves Front Page Setting Options.
+	 * Saves `front` step Options.
 	 */
 	public function radio_select_form_save() {
-		$this->validate_save();
+		$this->validate_save(); // MUST USE THIS FOR NONCE VERIFICATION.
 
 		$options = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
 

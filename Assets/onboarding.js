@@ -1,5 +1,5 @@
 /**
- * The Web Solver Onboarding scripts.
+ * The Web Solver Onboarding script.
  *
  * -----------------------------------
  * DEVELOPED-MAINTAINED-SUPPPORTED BY

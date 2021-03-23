@@ -77,14 +77,15 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 		 *
 		 * If `$src` and `$name` parameters are not provided or anything is wrong with the parameter, default child-class
 		 * `Onboarding_Wizard` in file `Includes/Wizard.php` will be used.\
-		 * Class `Onboarding_Wizard` in file `Includes/Wizard.php` is there as a boilerplate and can be used to create the onboarding wizard. All needed abstract functions as already declared there. Make appropriate changes as it seems fit for your use case.
+		 * Class `Onboarding_Wizard` in file `Includes/Wizard.php` is there as a boilerplate and can be used to create the onboarding wizard.\
+		 * All needed abstract functions as already declared there. Make appropriate changes as it seems fit for your use case.
 		 *
 		 * @param string $namespace  Your Plugin unique namespace.
-		 * @param string $prefix     Prefix for onboarding wizard. MUST BE UNIQUE AND NOT CHANGED ONCE SET.
+		 * @param string $prefix     Prefix for onboarding wizard. MUST BE UNIQUE AND MUST NOT BE CHANGED ONCE SET.
 		 * @param string $capability The current user capability who can manage onboarding.
 		 *                           Usually the highest level capability. Defaults to `manage_options` **(admin)**.
 		 * @param string $src        (Optional) The child-class file source path.\
-		 *                           **MUST HAVE SAME _$namespace_ DECLARED AT THE TOP OF THIS SOURCE FILE**.
+		 *                           **MUST HAVE SAME { @see @param _$namespace_ } DECLARED AT THE TOP OF THIS SOURCE FILE**.
 		 * @param string $name       (Optional) The onboarding wizard child-class extending abstract class. Just the classname.\
 		 *                          No need to add namespace before class as it will be handled by config.
 		 *
@@ -98,9 +99,9 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 		 * namespace My_Plugin\My_Feature;
 		 *  // code starts here.
 		 * ```
-		 * @todo Use the passed namespace for "Config.php" and "Includes/Wizard.php".
+		 * @todo Use the passed namespace at top of files "Config.php" and "Includes/Wizard.php".
 		 */
-		public function __construct( string $namespace, string $prefix = '', string $capability = 'manage_options', string $src = '', string $name = '' ) {
+		public function __construct( string $namespace, string $prefix, string $capability = 'manage_options', string $src = '', string $name = '' ) {
 			$this->namespace  = $namespace;
 			$this->prefix     = $prefix;
 			$this->capability = $capability;
@@ -110,17 +111,13 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 			include_once __DIR__ . '/Config.php';
 			include_once __DIR__ . '/Includes/Source/Onboarding.php';
 
-			/**
-			 * The child class that extends main onboarding class.
-			 *
-			 * @todo Extend abstract methods inside this file.
-			 */
-			include_once __DIR__ . '/Includes/Wizard.php';
+			if ( is_wp_error( $this->config() ) ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				wp_die( $this->config()->get_error_message(), $this->config()->get_error_data() );
+			}
 
 			// WordPress Hook to start onboarding.
-			if ( ! is_wp_error( $this->config() ) ) {
-				add_action( 'init', array( $this->config(), 'start_onboarding' ) );
-			}
+			add_action( 'init', array( $this->config(), 'start_onboarding' ) );
 
 			// Include the web solver API abstraction class.
 			include_once __DIR__ . '/thewebsolver.php';
@@ -154,16 +151,15 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 		 * Config can only be instantiated if namespace matches with namesapce defined in config file.
 		 * { @see @property TheWebSolver_Onboarding_Wizard::$namespace }
 		 *
-		 * @return object|void Instantiated config object, die with namespace mismatch message.
+		 * @return object|WP_Error Instantiated config object, WP_Error if namespace mismatch.
 		 *
 		 * @since 1.0
 		 */
 		public function config() {
-			$namespace = self::validate( $this->namespace, $this->capability );
+			$namespace = self::validate( $this->namespace, $this->capability, $this->prefix );
 
 			if ( is_wp_error( $namespace ) ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				wp_die( $namespace->get_error_message(), $namespace->get_error_data() );
+				return $namespace;
 			}
 
 			$config   = '\\' . $namespace . '\\Config';
@@ -187,14 +183,16 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 		 *
 		 * @param string $namespace   The onboarding wizard config namespace.
 		 * @param string $cap         The current user capability.
+		 * @param string $prefix      The onboarding wizard prefix.
 		 * @param bool   $config_file Whether validation is from `Config.php` file or not. Default is `false`.
 		 * @param string $config_ns   Namespace declared on `Config.php` file. No effect if `$config_file` is `false`.
 		 *
 		 * @return string|WP_Error Namespace if valid, `WP_Error` otherwise.
 		 *
 		 * @since 1.0
+		 * @static
 		 */
-		public static function validate( string $namespace, string $cap, bool $config_file = false, string $config_ns = '' ) {
+		public static function validate( string $namespace, string $cap, string $prefix, bool $config_file = false, string $config_ns = '' ) {
 			// Trim beginning slashes from namespace, if any, to exact match namespace.
 			$ns      = ltrim( $namespace, '\\' );
 			$config  = '\\' . $ns . '\\Config';
@@ -207,6 +205,32 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 			$note    = __( 'Add same namespace that is passed when instantiating <b>TheWebSolver_Onboarding_Wizard</b> at top of the <b>Config.php</b> and <b>Includes/Wizard.php</b> files.', 'tws-onboarding' );
 			$passed  = __( 'Namespace currently passed is', 'tws-onboarding' );
 			$located = '';
+
+			// Prefix errors.
+			$prefix_title = __( 'Onboarding class prefix error', 'tws-onboarding' );
+			$prefix_msg   = sprintf(
+				'<h1>%1$s</h1><p>%2$s.</p><p>%3$s.</p>',
+				$prefix_title,
+				__( 'Use your plugin\'s same unique prefix passed when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> class to the onboarding wizard child-class private method <code><b><em>Onboarding_Wizard::config()</em></b></code> to get the config instance', 'tws-onboarding' ),
+				__( 'Default prefix <b><em>"myplugin-prefix"</em></b> is being used', 'tws-onboarding' )
+			);
+
+			if ( 'myplugin-prefix' === $prefix || '' === $prefix ) {
+				return new WP_Error(
+					'prefix_mismatch',
+					wp_kses(
+						$prefix_msg,
+						array(
+							'h1'   => array(),
+							'p'    => array(),
+							'b'    => array(),
+							'em'   => array(),
+							'code' => array(),
+						)
+					),
+					esc_html( $prefix_title )
+				);
+			}
 
 			if ( ! function_exists( 'wp_get_current_user' ) ) {
 				include_once ABSPATH . 'wp-includes/pluggable.php';

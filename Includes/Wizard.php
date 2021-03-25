@@ -1,6 +1,6 @@
 <?php // phpcs:ignore WordPress.NamingConventions
 /**
- * The Web Solver Onboarding Wizard Initialization.
+ * The Web Solver WordPress Admin Onboarding Wizard Instantiation.
  * Boilerplate child-class to extend onboarding wizard class.
  *
  * @todo Set the wizard namespace.

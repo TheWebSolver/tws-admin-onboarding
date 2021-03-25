@@ -1,6 +1,6 @@
 <?php // phpcs:ignore WordPress.NamingConventions
 /**
- * The Web Solver Onboarding Wizard Configuration.
+ * The Web Solver WordPress Admin Onboarding Wizard Configuration.
  *
  * @todo Set the config namespace.
  * @todo Check all todo tags and make approriate changes where needed.
@@ -118,22 +118,23 @@ final class Config {
 	 *
 	 * Additional checks must be made as required.
 	 * For eg. Saving an option during installation and checking whether that option exists.
-	 * This way it will make sure that it's a clean install before redirecting to onboarding.
+	 * This way it will make sure that it's a clean install before enabling onboarding.
 	 *
-	 * @param string[] $check Validation before redirecting wizard during plugin activation.
+	 * @param string[] $check Validation before enabling onboarding during plugin activation.
+	 *                        Must have all values as `true` *(in string, not bool)* to pass the check.
 	 *
 	 * @link https://developer.wordpress.org/reference/functions/register_activation_hook/
 	 * @since 1.0
 	 * @example usage
 	 * ```
-	 * // Let's assume we are in main plugin file "myplugin.php"
+	 * // Let's assume we have main plugin file "myplugin.php"
 	 *
 	 * // First include the Onboarding Wizard main file like this:
 	 * include_once 'my-plugin/path-to/tws-admin-onboarding.php';
 	 *
 	 * // Here, lets assume you want your onboarding namespace as "My_Plugin\Onboarding" and have already set it at top of "Config.php" and "Includes/Wizard.php" file.
 	 *
-	 * // NOTE: Namespace must be same in these two files. Default namespace is set as "My_Plugin\My_Feature" for "Config.php" and "Includes/Wizard.php" file. Replace it with "My_Plugin\Onboarding" in this case.
+	 * // NOTE: Namespace must be same in these two files. Default namespace is set as "My_Plugin\My_Feature" for "Config.php" and "Includes/Wizard.php" file. Replace it with "My_Plugin\Onboarding" for this example.
 	 *
 	 * // Lets instantiate the onboarding wizard.
 	 * $onboarding = new TheWebSolver_Onboarding_Wizard( 'My_Plugin\Onboarding' );
@@ -144,21 +145,23 @@ final class Config {
 	 *  // Check if plugin is already installed.
 	 *  $old_install = get_option( 'myplugin_install_version', false );
 	 *
-	 *  // Success validation as initial value.
-	 *  $check = array( 'true' );
-	 *
 	 *  if ( ! $old_install ) {
-	 *   // Another true value if new install to enable onboarding page redirection.
+	 *   // if new install => enable onboarding.
 	 *   $check[] = 'true';
 	 *
-	 *   // Update the plugin installed version also.
+	 *   // Set the plugin install version to "1.0".
 	 *   update_option( 'myplugin_install_version', '1.0' );
 	 *  } else {
-	 *   //  This check fails second time plugin is activated after deactivation as it's already been installed with version "1.0".
+	 *   //  There is now installed version "1.0" => disable onboarding.
 	 *   $check[] = 'false';
 	 *  }
 	 *
-	 *  // Now onboarding will run on the basis of check parameter passed. This prevents enabling onboarding on each activation except first time.
+	 *  // If PHP version less than or equal to "7.0" => disable onboarding.
+	 *  if ( version_compare( phpversion(), '7.0', '<=' ) ) {
+	 *   $check[] = 'false';
+	 *  }
+	 *
+	 *  // Now onboarding will run on the basis of check parameter passed. This prevents enabling onboarding on each activation except first time and if version compare succeeds.
 	 *  $onboarding->config()->enable_onboarding( $check );
 	 * }
 	 * ```
@@ -170,9 +173,7 @@ final class Config {
 		 * WPHOOK: Filter -> enable/disable onboarding redirect after plugin activation.
 		 *
 		 * @param bool $redirect Whether to redirect or not.
-		 *
 		 * @var bool
-		 *
 		 * @since 1.0
 		 * @example usage
 		 * ```
@@ -188,9 +189,9 @@ final class Config {
 		 * }
 		 * ```
 		 */
-		$onboard_redirect = apply_filters( 'hzfex_enable_onboarding_redirect', true, $this->get_prefix() );
+		$redirect = apply_filters( 'hzfex_enable_onboarding_redirect', true, $this->get_prefix() );
 
-		if ( $onboard_redirect && ! in_array( 'false', $check, true ) ) {
+		if ( $redirect && ! in_array( 'false', $check, true ) ) {
 			set_transient( $this->get_prefix() . '_onboarding_redirect', 'yes', 30 );
 
 			/**
@@ -221,75 +222,34 @@ final class Config {
 		/**
 		 * WPHOOK: Filter -> enable/disable onboarding redirect after plugin activation.
 		 *
+		 * Same filter used during activation, for preventing any redirection bypass.
+		 *
 		 * @param bool $redirect Whether to redirect or not.
-		 *
 		 * @var bool
-		 *
+		 * @see {@method `Wizard::enable_onboarding()`}
 		 * @since 1.0
-		 * @example usage
-		 * ```
-		 * // Disable redirection after plugin activation.
-		 * add_filter( 'hzfex_enable_onboarding_redirect', 'no_redirect', 10, 2 );
-		 * function no_redirect( $enable, $prefix ) {
-		 *  // Bail if not our onboarding wizard.
-		 *  if ( 'my-prefix' !== $prefix ) {
-		 *   return $enable;
-		 *  }
-		 *
-		 *  return false;
-		 * }
-		 * ```
 		 */
-		$onboard_redirect = apply_filters( 'hzfex_enable_onboarding_redirect', true, $this->get_prefix() );
-
-		/**
-		 * WPHOOK: Filter -> additional check before starting onboarding wizard after plugin activation.
-		 *
-		 * @param string[] $check Must have all values as `true` (in string, not bool) to pass the check.
-		 *
-		 * @var string[]
-		 *
-		 * @since 1.0
-		 * @example usage
-		 * ```
-		 * // Lets make some checks before onboarding redirection after plugin activation.
-		 * add_filter( 'hzfex_onboarding_check_before_redirect', 'start_onboarding', 10, 2 );
-		 * function start_onboarding( $check, $prefix ) {
-		 *  // Bail if not our onboarding wizard.
-		 *  if ( 'my-prefix' !== $prefix ) {
-		 *   return $check;
-		 *  }
-		 *
-		 *  // If PHP version less than or equal to "7.0", don't redirect onboarding.
-		 *  if ( version_compare( phpversion(), '7.0', '<=' ) ) {
-		 *   $check[] = 'false';
-		 *  }
-		 *
-		 *  return $check;
-		 * }
-		 * ```
-		 * @todo Use this filter for additional check before starting onboarding wizard.
-		 */
-		$check = apply_filters( 'hzfex_onboarding_check_before_redirect', array( 'true' ), $this->get_prefix() );
+		$redirect = apply_filters( 'hzfex_enable_onboarding_redirect', true, $this->get_prefix() );
 
 		// Start onboarding wizard if everything seems new and shiny!!!
 		if (
 			'yes' === get_transient( $this->get_prefix() . '_onboarding_redirect' ) &&
 			true === current_user_can( $this->get_capability() ) &&
-			true === $onboard_redirect &&
-			! in_array( 'false', $check, true )
+			true === $redirect
 			) {
-			add_action( 'admin_init', array( $this, 'start_onboarding_wizard' ) );
+			add_action( 'admin_init', array( $this, 'init' ) );
 		}
 	}
 
 	/**
-	 * Handles redirection to onboarding wizzzaaaaardddd!!!!!.
+	 * Starts onboarding.
+	 *
+	 * Voila!!! We are now at onboarding intro page.
 	 *
 	 * @see {@method `Config::start_onboarding()`}
 	 * @since 1.0
 	 */
-	public function start_onboarding_wizard() {
+	public function init() {
 		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$current_page = isset( $_GET['page'] ) ? wp_unslash( $_GET['page'] ) : false;
 

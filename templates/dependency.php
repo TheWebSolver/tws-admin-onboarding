@@ -1,6 +1,6 @@
 <?php
 /**
- * Onboarding dependency plugin installation template.
+ * The Web Solver WordPress Admin Onboarding Wizard dependency plugin installation template.
  *
  * @package TheWebSolver\Core\Admin\Onboarding\Template
  *
@@ -20,6 +20,15 @@
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
 
+// Bail early if no need to show because for error
+// due to plugin already installed (should never have happened in the first place).
+if ( false === $show ) {
+	return;
+}
+?>
+
+<!-- Dependency Plugin Installation -->
+<?php
 // In case where dependency plugin needs to be installed/renistalled.
 if ( 'pending' === $status || 'installed' === $status ) :
 	if ( 'installed' === $status ) :
@@ -36,7 +45,7 @@ if ( 'pending' === $status || 'installed' === $status ) :
 		<div class="hz_install_depl_msg"><?php echo wp_kses_post( $message ); ?></div>
 		<div class="hz_install_depl hz_flx column center">
 			<button id="hz_install_depl" class="button" type="submit">
-				<?php echo wp_kses_post( $button . ' ' . $name ); ?>
+				<?php echo esc_html( $button . ' ' . $name ); ?>
 			</button>
 			<div class="install_loader"></div>
 		</div>
@@ -48,11 +57,12 @@ if ( 'pending' === $status || 'installed' === $status ) :
 	<div class="hz_install_depl_wrapper">
 		<div class="hz_install_depl_msg">
 			<?php echo wp_kses_post( $status ); ?>
+			<br>
 			<?php
 			echo sprintf(
 				'%1$s <b>%2$s</b>.',
-				esc_html_e( 'Please update or click the button below to download the compatible version of', 'tws-onboarding' ),
-				wp_kses_post( $name )
+				esc_html_e( 'Click the button below to download the compatible version of', 'tws-onboarding' ),
+				esc_html( $name )
 			);
 			?>
 		</div>
@@ -67,5 +77,6 @@ if ( 'pending' === $status || 'installed' === $status ) :
 			<a href="<?php echo esc_url( $next_step ); ?>" class="button button-next hz_dyn_btn"><?php echo esc_html( $button_text ); ?> →</a>
 		</p>
 	</div>
-	<?php
-endif;
+<?php endif; ?>
+<!-- #Dependency Plugin Installation -->
+

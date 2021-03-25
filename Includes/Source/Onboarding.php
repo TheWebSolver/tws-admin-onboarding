@@ -1,9 +1,9 @@
 <?php // phpcs:ignore WordPress.NamingConventions
 /**
- * The Web Solver Onboarding Wizard.
+ * The Web Solver WordPress Admin Onboarding Wizard Abstract Class.
  * Handles installation of dependency plugin at introduction page.
  *
- * @package TheWebSolver\Core\Admin\Onboarding\Class
+ * @package TheWebSolver\Core\Admin\Onboarding\Abstract
  *
  * -----------------------------------
  * DEVELOPED-MAINTAINED-SUPPPORTED BY
@@ -346,9 +346,7 @@ abstract class Wizard {
 		}
 
 		// Prepare admin user to have the given capability.
-		if ( false === $this->is_active ) {
-			add_filter( 'user_has_cap', array( $this, 'add_user_capability' ) );
-		}
+		add_filter( 'user_has_cap', array( $this, 'add_user_capability' ) );
 
 		// Bail if user has no permission.
 		if ( ! current_user_can( $this->capability ) ) {
@@ -376,6 +374,7 @@ abstract class Wizard {
 		$this->is_active    = TheWebSolver::maybe_plugin_is_active( $basename );
 
 		// Set dependency plugin's name and status on clean install.
+		// If $this->reset['dependency_status] => true in last step, then status => false.
 		if ( false === get_option( $this->prefix . '_onboarding_dependency_status' ) ) {
 			if ( $this->is_installed ) {
 				// Get plugin info from plugin data.
@@ -398,10 +397,10 @@ abstract class Wizard {
 				 * @param mixed  $info   The dependency plugin info.
 				 * @param string $prefix The onboarding prefix.
 				 * @param string $slug   The dependency plugin slug.
-				 *
+				 * @var mixed
 				 * @since 1.0
 				 */
-				apply_filters( 'hzfex_onboarding_dependency_plugin_info', $info, $this->prefix, $this->slug );
+				$info = apply_filters( 'hzfex_onboarding_dependency_plugin_info', $info, $this->prefix, $this->slug );
 
 				// If latest version of dependency plugin not compatible with WP or PHP, $info => WP_Error.
 				$status = is_wp_error( $info ) ? $info->get_error_message() : 'pending';
@@ -461,6 +460,9 @@ abstract class Wizard {
 		$this->get_all_steps();
 		$this->set_recommended_plugins();
 
+		$filtered          = array_filter( $this->recommended, array( $this, 'exclude_dependency_from_recommended' ) );
+		$this->recommended = $filtered;
+
 		// Remove recommended step if no data or user has no permission.
 		if ( 0 === count( $this->recommended ) || ! current_user_can( 'install_plugins' ) ) {
 			unset( $this->steps['recommended'] );
@@ -471,7 +473,7 @@ abstract class Wizard {
 
 		$this->register_scripts();
 
-		// Save data of current step with callback function set with callback function on "save" key of that step.
+		// Save data of current step set with callback function on "save" key of that step.
 		if ( isset( $_POST['save_step'] ) && 'save_step' === $_POST['save_step'] && isset( $this->steps[ $this->step ]['save'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			call_user_func_array( $this->steps[ $this->step ]['save'], array( $this ) );
 		}
@@ -485,12 +487,25 @@ abstract class Wizard {
 	}
 
 	/**
+	 * Filters out dependency plugin from recommended plugin.
+	 *
+	 * This is to prevent showing dependency plugin in list of recommended plugins too.
+	 *
+	 * @param array $plugin The current recommended plugin.
+	 *
+	 * @since 1.0
+	 */
+	public function exclude_dependency_from_recommended( $plugin ) {
+		return $plugin['slug'] !== $this->slug;
+	}
+
+	/**
 	 * Gets all steps of onboarding wizard.
 	 *
 	 * @since 1.0
 	 */
 	protected function get_all_steps() {
-		// Let's not change the intro page.
+		// Let's set the default intro page.
 		$step['introduction'] = array(
 			'name'  => __( 'Introduction', 'tws-onboarding' ),
 			'image' => array( $this, 'introduction_image' ),
@@ -499,6 +514,7 @@ abstract class Wizard {
 
 		$all_steps = array_merge( $step, $this->set_steps() );
 
+		// And this too.
 		$all_steps['recommended'] = array(
 			'name' => __( 'Recommended', 'tws-onboarding' ),
 			'view' => array( $this, 'recommended_view' ),
@@ -506,6 +522,7 @@ abstract class Wizard {
 			'save' => array( $this, 'recommended_save' ),
 		);
 
+		// And this final step.
 		$all_steps['ready'] = array(
 			'name' => __( 'Ready!', 'tws-onboarding' ),
 			'desc' => __( 'Everything is set. Let\'s start.', 'tws-onboarding' ),
@@ -516,18 +533,25 @@ abstract class Wizard {
 		/**
 		 * WPHOOK: Filter -> Plugin onboarding steps.
 		 *
-		 * Useful to change step name.
+		 * Useful to change step name, desc, set step hero image.
 		 *
-		 * @param array $steps Onboarding steps.
+		 * @param array  $steps  Onboarding steps.
 		 * @param string $prefix The onboarding prefix.
-		 *
+		 * @var array
 		 * @since 1.0
 		 */
 		$this->steps = apply_filters( 'hzfex_set_onboarding_steps', $all_steps, $this->prefix );
 	}
 
 	/**
-	 * Sets all onboarding steps except introduction.
+	 * Sets onboarding steps.
+	 *
+	 * `introduction`, `recommended` and `ready` steps are created by default.
+	 * So, all steps display order will be:
+	 * * Intro step
+	 * * All other steps added by this method
+	 * * Recommended step
+	 * * Ready step.
 	 *
 	 * @return array
 	 *
@@ -556,7 +580,7 @@ abstract class Wizard {
 			do_action( 'admin_head' );
 			?>
 		</head>
-		<body class="onboarding admin-onboarding wp-core-ui <?php echo $this->is_installed ? ' tws-onboarding' : 'tws-onboarding-no'; ?>-<?php echo esc_html( $this->slug ); ?>">
+		<body class="onboarding admin-onboarding wp-core-ui <?php echo $this->is_installed ? ' tws-onboarding' : 'tws-onboarding-no'; ?>-<?php echo esc_attr( $this->slug ); ?>">
 			<!-- onboarding_header -->
 			<header id="onboarding_header" class="hz_flx row center">
 			<?php if ( $this->logo['src'] ) : ?>
@@ -574,8 +598,12 @@ abstract class Wizard {
 					</a>
 				</h1>
 			<?php endif; ?>
-			<?php if ( 'introduction' === $this->get_step() ) : ?>
-				<a href="<?php echo esc_url( add_query_arg( 'onboarding', 'introduction', admin_url() ) ); ?>" class="button button-large hz_dyn_btn onboarding_dashboard_btn">← <?php esc_html_e( 'Dashboard', 'tws-onboarding' ); ?></a>
+			<?php
+			$steps = array_keys( $this->steps );
+			$first = array_shift( $steps );
+			if ( $first === $this->step ) :
+				?>
+				<a href="<?php echo esc_url_raw( add_query_arg( 'onboarding', 'introduction', admin_url() ) ); ?>" class="button button-large hz_dyn_btn onboarding_dashboard_btn">← <?php esc_html_e( 'Dashboard', 'tws-onboarding' ); ?></a>
 			<?php endif; ?>
 			</header>
 			<!-- #onboarding_header -->
@@ -614,14 +642,12 @@ abstract class Wizard {
 							?>
 							onboarding-step <?php echo esc_attr( $key ); ?>"
 							>
-						<?php
-						echo '<span class="onboarding_step_counter">' . esc_html( $current_step ) . '</span>';
-						echo '<span class="onboarding_step_name only_desktop">' . esc_html( $step['name'] ) . '</span>';
+						<span class="onboarding_step_counter"><?php echo esc_html( $current_step ); ?></span>
+						<span class="onboarding_step_name only_desktop"><?php echo esc_html( $step['name'] ); ?></span>
 
-						if ( isset( $step['desc'] ) ) {
-							echo '<span class="onboarding_step_desc only_desktop">' . wp_kses_post( $step['desc'] ) . '</span>';
-						}
-						?>
+						<?php if ( isset( $step['desc'] ) ) : ?>
+							<span class="onboarding_step_desc only_desktop"><?php echo wp_kses_post( $step['desc'] ); ?></span>
+						<?php endif; ?>
 						</li>
 					<?php endforeach; ?>
 				</ol>
@@ -692,7 +718,7 @@ abstract class Wizard {
 	 */
 	protected function introduction() {
 		$title       = __( 'Welcome to the Onboarding Wizard', 'tws-onboarding' );
-		$description = __( 'Thank you for selecting this plugin for your next WordPress Project. Make sure that your dependency plugin is installed and active. If it is not, we will let you installed right from this page.', 'tws-onboarding' );
+		$description = __( 'Thank you for selecting this plugin for your next WordPress Project. Make sure that your dependency plugin is installed and active. If it is not, we will let you install it right from this page.', 'tws-onboarding' );
 		$start       = __( 'Let\'s Start', 'tws-onboarding' );
 		$skip        = __( 'Skip & Continue', 'tws-onboarding' );
 		$button_text = $this->is_installed ? $start : $skip;
@@ -704,29 +730,43 @@ abstract class Wizard {
 			__( 'You can easily install it from here.', 'tws-onboarding' )
 		);
 
+		$show = ! $this->is_installed;
+		$msg  = '';
+		if ( is_wp_error( $status ) ) {
+			$code = $status->get_error_code();
+			$show = 'force_install_execution' === $code ? false : $show;
+			$msg  = $status->get_error_message();
+		} elseif ( is_string( $status ) ) {
+			$msg = $status;
+		}
+
 		/**
 		 * WPHOOK: Filter -> Default intro information.
 		 *
-		 * @param array $args    The content title and desccription.
-		 * @param string $prefix The onboarding prefix.
-		 *
+		 * @param array  $args      The content title and desccription.
+		 * @param string $prefix    The onboarding prefix.
+		 * @param bool   $installed Whether dependency plugin installed or not.
+		 * @var array
 		 * @since 1.0
 		 */
 		$intro_args = apply_filters(
 			'hzfex_onboarding_intro_default_content',
 			array(
-				'title' => $title,
-				'desc'  => $description,
+				'title'  => $title,
+				'desc'   => $description,
+				'button' => $button_text,
 			),
-			$this->prefix
+			$this->prefix,
+			$this->is_installed
 		);
 
 		$dependency_args = array(
 			'slug'        => $this->slug,
 			'name'        => $this->name,
-			'status'      => $status, // Can be "installed", "pending" or "WP_Error message".
+			'status'      => $msg, // Can be "installed", "pending" or "WP_Error message".
 			'next_step'   => $this->get_next_step_link(),
-			'button_text' => $button_text,
+			'button_text' => $intro_args['button'],
+			'show'        => $show,
 		);
 
 		?>
@@ -739,19 +779,17 @@ abstract class Wizard {
 		if ( ! $this->is_installed ) :
 			if ( 0 < strlen( $this->slug ) ) :
 				?>
-				<!-- Dependency Plugin Installation -->
 				<?php if ( 'pending' === $status ) : ?>
 					<p class="onboarding-dy-title"><?php echo wp_kses_post( $dy_title ); ?></p>
 				<?php endif; ?>
 				<?php TheWebSolver::get_template( 'dependency.php', $dependency_args, '', trailingslashit( $this->path ) . 'templates/' ); ?>
-				<!-- #Dependency Plugin Installation -->
 				<?php
 			endif;
 		else :
 			?>
 			<!-- Action Buttons -->
-			<p id="hz_dyn_btnWrapper" class="hz_dyn_btnWrapper hz_step_actions step onboarding-actions <?php echo esc_attr( $status ); ?>">
-				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-next hz_dyn_btn main_btn hz_btn__prim"><?php echo esc_html( $button_text ); ?> →</a>
+			<p id="hz_dyn_btnWrapper" class="hz_dyn_btnWrapper hz_step_actions step onboarding-actions">
+				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-next hz_dyn_btn main_btn hz_btn__prim"><?php echo esc_html( $intro_args['button'] ); ?> →</a>
 			</p>
 			<!-- #Action Buttons -->
 			<?php
@@ -765,37 +803,55 @@ abstract class Wizard {
 	 * @static
 	 */
 	public function install_dependency() {
-		$msg = __( 'You messed up the code! Please contact the developer :)', 'tws-onboarding' );
+		$msg         = __( 'You messed up the code! Please contact the developer :)', 'tws-onboarding' );
+		$noparam     = __( 'The plugin could not be installed due to an invalid slug, filename, or version. Manual installation required.', 'tws-onboarding' );
+		$isinstalled = __( 'The plugin is already installed. You are trying to bypass the security. Do not force me to come get you!!!', 'tws-onboarding' );
 
 		// Bail if ajax errors.
 		if ( false === check_ajax_referer( 'silent_installation', '_silent_nonce' ) ) {
 			exit( wp_kses_post( $msg ) );
 		}
 
-		// Bail early if no data provided.
-		if ( ! isset( $_POST['action'] ) ) {
-			wp_send_json_error( new \WP_Error( 'invalid_action', $msg ), 404 );
-			exit( wp_kses_post( $msg ) );
+		$post = array_map( 'sanitize_key', wp_unslash( $_POST ) );
+
+		$slug      = isset( $post['slug'] ) && ! empty( $post['slug'] ) ? $post['slug'] : 'false';
+		$file      = isset( $post['file'] ) && ! empty( $post['file'] ) ? $post['file'] : 'false';
+		$version   = isset( $post['version'] ) && ! empty( $post['version'] ) ? $post['version'] : 'false';
+		$name      = isset( $post['name'] ) && ! empty( $post['name'] ) ? $post['name'] : $this->name;
+		$prefix    = isset( $post['prefix'] ) && ! empty( $post['prefix'] ) ? $post['prefix'] : $this->prefix;
+		$installed = isset( $post['installed'] ) && is_bool( $post['installed'] ) ? $post['installed'] : $this->is_installed;
+
+		$validate = array( $slug, $file, $version );
+
+		// If invalid slug, file or version, $validate => false.
+		if ( in_array( 'false', $validate, true ) ) {
+			$error = new \WP_Error( 'invalid_plugin', $noparam );
+			update_option( $prefix . '_onboarding_dependency_status', $error );
+			wp_send_json_error( $error, 404 );
+			exit( wp_kses_post( $noparam ) );
 		}
 
-		$tws_file = trailingslashit( $this->path ) . 'thewebsolver.php';
-		if ( ! class_exists( '\TheWebSolver' ) && file_exists( $tws_file ) ) {
-			include_once $tws_file;
+		// Bail if already installed.
+		if ( true === $installed ) {
+			$error = new \WP_Error( 'force_install_execution', $isinstalled );
+			update_option( $prefix . '_onboarding_dependency_status', $error );
+			wp_send_json_error( $error, 404 );
+			exit( wp_kses_post( $isinstalled ) );
 		}
 
 		// Start installation. Suppress feedback.
 		ob_start();
 
-		// NOTE: Sometime installation may throw "An unexpected error occurred" WordPress warning. Shows in debug.log file.
+		// NOTE: Sometime installation may throw "An unexpected error occurred" WordPress warning. Shows in debug.log file if `WP_DEBUG_LOG` is `true`.
 		// Also, plugin activation triggers Ajax in an infinite loop without activation. So, $activate => false.
-		$response = TheWebSolver::maybe_install_plugin( $this->slug, $this->filename, $this->version, false );
+		$response = TheWebSolver::maybe_install_plugin( $slug, $file, $version, false );
 
 		// Discard feedback.
 		ob_end_clean();
 
 		// Update option to reflect installed status if we get dependency plugin name as response.
-		if ( is_string( $response ) ) {
-			update_option( $this->prefix . '_onboarding_dependency_status', 'installed' );
+		if ( is_string( $response ) && $response === $name ) {
+			update_option( $prefix . '_onboarding_dependency_status', 'installed' );
 		}
 
 		if ( is_wp_error( $response ) ) {
@@ -859,9 +915,7 @@ abstract class Wizard {
 		 *
 		 * @param array  $content `title` and `desc` content.
 		 * @param string $prefix   The onboarding prefix.
-		 *
 		 * @var array
-		 *
 		 * @since 1.0
 		 */
 		$recommended = apply_filters(
@@ -900,7 +954,7 @@ abstract class Wizard {
 					// Get current activated status (maybe activated/deactivated outside the scope of onboarding).
 					$is_active = $this->get_active_status( $base );
 
-					// Previous state of all recommended plugins.
+					// Previous state of the current plugin.
 					$plugins_status[ $slug ]  = isset( $plugins_status[ $slug ] ) ? $plugins_status[ $slug ] : 'false';
 					$plugins_checked[ $slug ] = isset( $plugins_checked[ $slug ] ) ? $plugins_checked[ $slug ] : 'yes';
 
@@ -926,18 +980,17 @@ abstract class Wizard {
 					</div>
 					<?php
 				endforeach;
-
 				update_option( $this->prefix . '_get_onboarding_recommended_plugins_status', $plugins_status );
 				update_option( $this->prefix . '_get_onboarding_recommended_plugins_checked_status', $plugins_checked );
-
-				// Set the button text accordingly.
-				if ( in_array( 'false', $plugins_status, true ) ) {
-					$text = __( 'Save & Continue', 'tws-onboarding' );
-				}
 				?>
 
 			</fieldset>
-			<?php if ( in_array( 'false', $plugins_status, true ) ) : ?>
+
+			<?php
+			// Set the button text accordingly.
+			if ( in_array( 'false', $plugins_status, true ) ) :
+				$text = __( 'Save & Continue', 'tws-onboarding' );
+				?>
 				<!-- onboarding-recommended-info contents will be added from "onboarding.js" -->
 				<div class="onboarding-recommended-info hz_flx column center">
 					<p class="label"><span class="count"></span><span class="suffix"></span></p>
@@ -1024,6 +1077,7 @@ abstract class Wizard {
 			'name' => $title,
 		);
 		?>
+
 		<div class="recommended-plugin hz_switcher_control <?php echo esc_attr( 'true' === $status ? 'disabled' : 'enabled' ); ?> hz_onboarding_image_icon">
 			<label for="<?php echo esc_attr( 'onboarding_recommended_' . $slug ); ?>">
 				<input
@@ -1051,9 +1105,10 @@ abstract class Wizard {
 				</div>
 			</label>
 			<?php if ( 'true' === $status ) : ?>
-				<div class="hz_recommended_active_notice hz_flx row center"><span><b><?php echo wp_kses_post( $title ); ?></b> <?php esc_html_e( 'is already active', 'tws-onboarding' ); ?></span></div>
+				<div class="hz_recommended_active_notice hz_flx row center"><span><b><?php echo esc_html( $title ); ?></b> <?php esc_html_e( 'is already active', 'tws-onboarding' ); ?></span></div>
 			<?php endif; ?>
 		</div>
+
 		<?php
 	}
 
@@ -1102,8 +1157,16 @@ abstract class Wizard {
 	protected function final_step() {
 		$this->reset();
 
+		$dep_option = $this->prefix . '_onboarding_dependency_status';
+		$dep_status = get_option( $dep_option );
 		if ( isset( $this->reset['dependency_status'] ) && $this->reset['dependency_status'] ) {
-			delete_option( $this->prefix . '_onboarding_dependency_status' );
+			delete_option( $dep_option );
+		} else {
+			if ( is_wp_error( $dep_status ) ) {
+				$code    = $dep_status->get_error_message();
+				$message = 'force_install_execution' === $code ? 'installed' : $dep_status->get_error_message();
+				update_option( $dep_option, $message );
+			}
 		}
 
 		if ( isset( $this->reset['dependency_name'] ) && $this->reset['dependency_name'] ) {
@@ -1132,7 +1195,6 @@ abstract class Wizard {
 		 * such as activation of dependency plugin, updating/deleting options.
 		 *
 		 * @param string $prefix The onboarding prefix.
-		 *
 		 * @since 1.0
 		 */
 		do_action( 'hzfex_onboarding_before_final_step_contents', $this->prefix );
@@ -1144,10 +1206,8 @@ abstract class Wizard {
 		 * WPHOOK: Filter -> Onboarding ready step contents.
 		 *
 		 * @param array  $content The onboarding final step contents.
-		 * @param string $prefix The onboarding prefix.
-		 *
-		 * @var array $content Onboarding ready step content.
-		 *
+		 * @param string $prefix  The onboarding prefix.
+		 * @var array    $content Onboarding ready step content.
 		 * @since 1.0
 		 */
 		$content = apply_filters(
@@ -1161,16 +1221,15 @@ abstract class Wizard {
 		?>
 
 		<div class="onboarding_complete">
-			<h1><?php echo esc_html( $content['title'] ); ?></h1>
+			<h1><?php echo wp_kses_post( $content['title'] ); ?></h1>
 			<p class="onboarding_complete_content"><?php echo wp_kses_post( $content['desc'] ); ?></p>
 		</div>
 
 		<?php
 		/**
-		 * WPHOOK: Action -> Fires at final step action button wrapper.
+		 * WPHOOK: Action -> Fires after final step contents.
 		 *
 		 * @param string $prefix The onboarding prefix.
-		 *
 		 * @since 1.0
 		 */
 		do_action( 'hzfex_onboarding_after_final_step_contents', $this->prefix );
@@ -1279,7 +1338,8 @@ abstract class Wizard {
 		 *
 		 * @param array  $handles The already registered script handles.
 		 * @param string $prefix  The onboarding prefix.
-		 *
+		 * @var array
+		 * @since 1.0
 		 * @example usage
 		 * ```
 		 * add_filter( 'hzfex_register_onboarding_scripts', 'dependency_scripts', 10, 2 );
@@ -1299,10 +1359,6 @@ abstract class Wizard {
 		 *  return $handles;
 		 * }
 		 *```
-		 *
-		 * @var array
-		 *
-		 * @since 1.0
 		 */
 		$script_handles = apply_filters( 'hzfex_register_onboarding_scripts', array( 'jquery', 'hzfex_select2' ), $this->prefix );
 
@@ -1324,6 +1380,12 @@ abstract class Wizard {
 				'ajaxdata'    => array(
 					'_silent_nonce' => wp_create_nonce( 'silent_installation' ),
 					'action'        => 'silent_plugin_install',
+					'slug'          => $this->slug,
+					'file'          => $this->filename ? $this->filename : $this->slug,
+					'version'       => $this->version,
+					'name'          => $this->name,
+					'prefix'        => $this->prefix,
+					'installed'     => $this->is_installed,
 				),
 				'recommended' => array(
 					'single' => __( 'Plugin', 'tws-onbaording' ),
@@ -1332,6 +1394,7 @@ abstract class Wizard {
 					'select' => __( 'Select one or more plugins above to install/activate', 'tws-onboarding' ),
 					'check'  => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" class="hz_ob_check"><g class="paths"><path fill="currentColor" d="M504.5 144.42L264.75 385.5 192 312.59l240.11-241a25.49 25.49 0 0 1 36.06-.14l.14.14L504.5 108a25.86 25.86 0 0 1 0 36.42z" class="secondary"></path><path fill="currentColor" d="M264.67 385.59l-54.57 54.87a25.5 25.5 0 0 1-36.06.14l-.14-.14L7.5 273.1a25.84 25.84 0 0 1 0-36.41l36.2-36.41a25.49 25.49 0 0 1 36-.17l.16.17z" class="primary"></path></g></svg>',
 				),
+				'selectPlh'   => __( 'Select Options', 'tws-onboarding' ),
 			),
 		);
 
@@ -1346,7 +1409,8 @@ abstract class Wizard {
 		 *
 		 * @param array  $handles The already registered style handles.
 		 * @param string $prefix  The onboarding prefix.
-		 *
+		 * @var array
+		 * @since 1.0
 		 * @example usage
 		 * ```
 		 * add_filter( 'hzfex_register_onboarding_styles', 'dependency_styles', 10, 2 );
@@ -1366,10 +1430,6 @@ abstract class Wizard {
 		 *  return $handles;
 		 * }
 		 *```
-		 *
-		 * @var array
-		 *
-		 * @since 1.0
 		 */
 		$style_handles = apply_filters( 'hzfex_register_onboarding_styles', array( 'hzfex_select2_style', 'googleFont' ), $this->prefix );
 		wp_register_style( 'onboarding_style', $this->url . 'Assets/onboarding.css', $style_handles, '1.0' );
@@ -1379,7 +1439,6 @@ abstract class Wizard {
 		 *
 		 * @param array $handles The registered scripts and styles for onboarding wizard.
 		 * @param string $prefix The onboarding prefix.
-		 *
 		 * @since 1.0
 		 */
 		do_action(
@@ -1417,7 +1476,7 @@ abstract class Wizard {
 		$submit = '' === $submit_text ? __( 'Save & Continue' ) : $submit_text;
 		?>
 		<!-- onboarding-actions -->
-		<fieldset class="onboarding-actions step <?php echo esc_attr( $this->get_step() ); ?> hz_flx column center">
+		<fieldset class="onboarding-actions step <?php echo esc_attr( $this->step ); ?> hz_flx column center">
 			<?php if ( $prev ) : ?>
 				<a href="<?php echo esc_url( $this->get_previous_step_link() ); ?>" class="button button-large button-prev hz_btn__prev hz_btn__prim hz_btn__nav">← <?php esc_html_e( 'Previous Step', 'tws-onboarding' ); ?></a>
 			<?php endif; ?>

@@ -1,5 +1,5 @@
 /**
- * The Web Solver Onboarding script.
+ * The Web Solver WordPress Admin Onboarding Wizard script.
  *
  * -----------------------------------
  * DEVELOPED-MAINTAINED-SUPPPORTED BY
@@ -22,7 +22,7 @@ jQuery(function ($) {
 		/**
 		 * Radio fields control element.
 		 *
-		 * @type {object} `.hz_card_control > .hz_card_control`.
+		 * @type {object} `input[data-control="card"]`.
 		 */
 		radio: $('input[data-control="card"]'),
 
@@ -36,10 +36,10 @@ jQuery(function ($) {
 		/**
 		 * Select field control element.
 		 *
-		 * @type {object} `.hz_select_control .hz_select_control`.
+		 * @type {object} `select[data-control="select"]`.
 		 * @property {object}
 		 */
-		select: $('.hz_select_control > .hz_select_control'),
+		select: $('select[data-control="select"]'),
 
 		/**
 		 * Select field control parent container.
@@ -53,7 +53,7 @@ jQuery(function ($) {
 		 *
 		 * @type {string}
 		 */
-		selectPlaceholder: 'Select Options',
+		selectPlaceholder: tws_ob.selectPlh,
 
 		/**
 		 * Ajax dependency plugin installer button wrapper.
@@ -121,9 +121,9 @@ jQuery(function ($) {
 		/**
 		 * Recommended plugin checkbox field.
 		 *
-		 * @type {object} `.recommended-plugin input`.
+		 * @type {object} `.recommended-plugin input[data-control="switch"]`.
 		 */
-		recommendedInput: $('.recommended-plugin input'),
+		recommendedInput: $('.recommended-plugin input[data-control="switch"]'),
 
 		/**
 		 * Recommended plugins name holder DOM element.
@@ -208,23 +208,40 @@ jQuery(function ($) {
 				/**
 				 * Gets response back in JSON format.
 				 *
-				 * @param {JSON} response
+				 * @param {object} response
 				 */
 				success: response => {
-					console.info(response);
 					if (response.success) {
 						$(tws.deplBtn).html(tws.deplSuccess).remove();
 						$(tws.deplNextBtnParent).append(tws.deplNextBtn);
 						$(tws.deplBtnWrapper).removeClass('installing').addClass('installed');
 						$('.hz_install_depl_msg').remove();
 						$(tws.deplBtnWrapper).append(`<p id="hz_install_depl" class="hz_flx column center"><span>${tws_ob.successStar}</span><span>${response.data} ${tws.deplSuccess}</span></p>`).fadeIn(500);
-						$('.button-next').html(`${tws.deplSuccessNext} →`);
-						setTimeout(tws.enableClick(tws.buttons), 6000);
+						$(tws.deplBtnWrapper).parent().find('.button-next').html(`${tws.deplSuccessNext} →`);
+						setTimeout(tws.enableClick(tws.buttons), 500);
 						return true;
 					}
 				},
-			})
 
+				/**
+				 *
+				 * @param {object} response jqXHR
+				 * @param {string} message HTTP error. eg. "error".
+				 * @param {string} exception Optional. Error object. eg. "Not Found".
+				 */
+				error: (response, message, exception) => {
+					const data = response.responseJSON.data[0];
+					$(tws.deplBtn).remove();
+					$(tws.deplNextBtnParent).append(tws.deplNextBtn);
+					$(tws.deplBtnWrapper).removeClass('installing').addClass('install_error');
+					$('.hz_install_depl_msg').remove();
+					$(tws.deplBtnWrapper).append(`<p id="hz_install_depl" class="hz_flx column center"><span>${data.message}</span></p>`).fadeIn(500);
+					console.log(`${message}: ${exception}`);
+					$(tws.deplBtnWrapper).parent().find('.button-next').html(`${tws.deplSuccessNext} →`);
+					setTimeout(tws.enableClick(tws.buttons), 500);
+					return false;
+				}
+			});
 			return false;
 		},
 
@@ -246,7 +263,7 @@ jQuery(function ($) {
 		/**
 		 * Adds/removes recommended plugin name in a container when checked.
 		 *
-		 * @param {Object} Plugin The current recommended plugin checkbox input field.
+		 * @param {object} plugin The current recommended plugin checkbox input field.
 		 */
 		toggleRecommendedName: plugin => {
 			const rcdHolder = '#' + $(tws.recommendedHolder).attr('id');
@@ -295,7 +312,7 @@ jQuery(function ($) {
 		/**
 		 * Disables clicking on next previous button after click.
 		 *
-		 * @param {Object} event The submit event.
+		 * @param {object} event The submit event.
 		 */
 		disableNav: event => { // eslint-disable-line
 			$(this).find('input[type="submit"]').prop('disabled', true);
@@ -316,7 +333,6 @@ jQuery(function ($) {
 				event.preventDefault();
 			});
 			link.addClass('disabled');
-			link.attr('href', '');
 		},
 
 		/**
@@ -381,7 +397,7 @@ jQuery(function ($) {
 				placeholder: tws.selectPlaceholder,
 				allowClear: false,
 				dropdownParent: $(tws.selectParent),
-				minimumResultsForSearch: 5,
+				minimumResultsForSearch: Infinity,
 				closeOnSelect: true
 			});
 		}

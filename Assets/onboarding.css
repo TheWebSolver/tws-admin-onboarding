@@ -15,15 +15,17 @@
  */
 
 :root {
-  --dark: #09171e;
-  --dark-alt: #0a1a22;
+  /* --dark: #09171e; */
+  --dark: #0f3143;
+  /* --dark-alt: #0a1a22; */
+  --dark-alt: #10394d;
   --night-blue: #263238;
   --white: #fff;
   --success: #009688;
   --error: #ac2222;
   --error-alt: #c02626;
 	--error-disabled: #7b3939;
-	--error-bg: #2e1114;
+	--error-bg: #631b23;
   --gray: rgb(238, 238, 238);
   --mild-gray: #cccccc;
   --hard-gray: #808080;
@@ -56,15 +58,14 @@ a {
 input[type="text"],
 textarea {
   font-size: 1em;
-  background: var(--dark-alt);
-  border: 2px solid black;
+  background: var(--shadow);
   border-radius: 5px;
   width: calc(100% - 36px);
   min-height: 50px;
   color: var(--white);
   font-family: Titillium Web;
   padding: 15px;
-  border: 3px solid var(--dark-grey);
+  border: 3px solid var(--dark-alt);
   transition: border 0.2s ease-in-out;
 }
 textarea {
@@ -74,7 +75,7 @@ input:not([type="file"], [type="image"]):focus-visible,
 select:focus-visible,
 button:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--bluish);
+  outline: 2px solid var(--primary-focus);
 }
 fieldset {
   padding-inline: 0;
@@ -87,7 +88,7 @@ fieldset.onboarding-actions {
   margin-top: 60px;
   margin-bottom: auto;
 }
-form .desc {
+form .desc, .radio_subtitle {
   display: block;
   margin-block-start: 1em;
   margin-block-end: 1em;
@@ -255,7 +256,7 @@ header,
   font-size: 0.8em;
   font-weight: normal;
   line-height: 1.4em;
-  margin-left: 40px;
+  margin-left: 42px;
 }
 .step.done {
   color: var(--dark-grey);
@@ -304,10 +305,10 @@ input.button-next {
   color: var(--primary);
 }
 .onboarding-actions .button.hz_btn__nav.disabled {
-	color: var(--night-blue);
+	color: var(--medium-gray);
 }
 .onboarding-actions .button.hz_btn__prim.disabled {
-	color: var(--shadow);
+	color: var(--dark-grey);
 }
 .onboarding-actions .button.disabled {
 	cursor: wait;
@@ -327,7 +328,8 @@ input.button-next {
   flex-flow: column;
   align-content: center;
   align-items: center;
-  box-shadow: inset 0 0 86px #06131a;
+  /* box-shadow: inset 0 0 86px #06131a; */
+	background-color: var(--shadow);
   border-radius: 10px;
   margin-top: 50px;
   padding: 20px;
@@ -347,7 +349,7 @@ input.button-next {
 #hz_install_depl:disabled {
   cursor: not-allowed;
 }
-.hz_install_depl:not(.installed) #hz_install_depl,
+.hz_install_depl:not(.installed) button#hz_install_depl,
 .hz_install_depl > a {
   text-decoration: none;
   background-color: var(--error);
@@ -372,12 +374,12 @@ input.button-next {
   vertical-align: top;
   margin-left: 2px;
 }
-.hz_install_depl:not(.installed) #hz_install_depl:hover,
+.hz_install_depl:not(.installed) button#hz_install_depl:hover,
 .hz_install_depl > a:hover {
   background-color: var(--error-alt);
   box-shadow: 0px 10px 60px rgba(5, 5, 5, 0.5);
 }
-.hz_install_depl.installing #hz_install_depl {
+.hz_install_depl.installing button#hz_install_depl {
   width: 350px;
   height: 7px;
   padding: 0;
@@ -400,6 +402,16 @@ input.button-next {
   font-weight: 600;
   background: none;
   border: none;
+}
+.hz_install_depl.install_error #hz_install_depl {
+	color: var(--secondary-focus);
+}
+.hz_install_depl.installed #hz_install_depl, .hz_install_depl.install_error #hz_install_depl {
+	font-size: 1em;
+  font-weight: 600;
+  background: none;
+  border: none;
+	text-align: center;
 }
 #hz_install_depl.hz_flx {
   align-items: center;
@@ -447,13 +459,13 @@ input.button-next {
  ***************************************/
 /* define vars */
 :root {
-  --primary: #009688;
-  --primary-focus: #00796a;
+  --primary: #29b6a5;
+  --primary-focus: #009688;
   --primary-defocus: rgb(224, 242, 241);
   --primary-border: rgba(0, 150, 136, 0.5);
   --secondary: #d50000;
-  --secondary-focus: #b71c1c;
-  --secondary-shadow: rgba(213, 0, 0, 0.3);
+  --secondary-focus: #ef6a6a;
+  --secondary-shadow: rgba(248, 66, 66, 0.3);
   --white: #fff;
   --dark-grey: #546e7a;
   --shadow-dark: rgba(0, 0, 0, 0.1);
@@ -548,7 +560,6 @@ span.option_notice.success {
   color: var(--error-disabled);
 }
 .hz_switcher_control input {
-  visibility: hidden;
   opacity: 0;
 	position: absolute;
 	left: -100px;
@@ -558,45 +569,47 @@ span.option_notice.success {
 .hz_switcher_control .hz_switcher:before {
   background: var(--gray);
   box-shadow: inset 0px 0px 10px var(--dark);
-  border-radius: 8px;
-  content: "" !important;
+  border-radius: 10px;
+  content: "";
   top: 5px;
-  right: 0 !important;
-  height: 16px !important;
-  margin: 0 !important;
+  right: 0;
+  height: 16px;
+  margin: 0;
   position: absolute;
-  opacity: 0.3 !important;
+  opacity: 0.3;
   transition: all 0.4s ease-in-out;
-  width: 40px !important;
+  width: 40px;
 }
 .hz_switcher_control input:checked + .hz_switcher:before {
-  background: var(--primary-focus) !important;
+  background: var(--primary-focus);
   opacity: 0.5;
 }
 .hz_switcher_control .hz_switcher:after {
-  background: var(--dark-grey) !important;
+  background: var(--dark-grey);
   border-radius: 16px;
   box-shadow: 0px 0px 5px var(--shadow-dark);
-  content: "" !important;
-  height: 24px !important;
-  right: 16px !important;
+  content: "";
+  height: 24px;
+  right: 16px;
   position: absolute;
   top: 1px;
   transition: all 0.3s ease-in-out;
-  width: 24px !important;
+  width: 24px;
 }
 .hz_switcher_control input:checked + .hz_switcher:after {
-  background: var(--primary-focus) !important;
-  right: 0 !important;
-}
-.hz_switcher_control input:focus + .hz_switcher:before {
-  background: var(--primary-focus) !important;
+  background: var(--primary-focus);
+  right: 0;
 }
 .hz_switcher_control.disabled .hz_switcher:before {
   background: var(--error);
 }
+.hz_switcher_control input:focus + .hz_switcher:before,
+.hz_switcher_control input:focus:checked + .hz_switcher::before {
+	opacity: 1;
+	background-color: var(--mild-green);
+}
 .hz_switcher_control.disabled .hz_switcher:after {
-  background: var(--error-disabled) !important;
+  background: var(--error-disabled);
 }
 .hz_switcher_label {
   max-width: calc(100% - 60px);
@@ -672,7 +685,7 @@ span.option_notice.success {
 }
 .hz_card_control_wrapper.hz_radio_selected .hz_card_info {
   color: var(--light-gray-bold);
-  background: var(--dark-grey);
+  background: var(--shadow);
   transition: all 0.2s ease-in-out;
 }
 .hz_onboarding_image_icon figure,
@@ -782,9 +795,9 @@ span.option_notice.success {
 .select2-container .select2-selection {
   display: flex;
   align-items: center;
-  height: 50px;
-  border: 2px solid var(--dark-grey);
-  background-color: var(--dark-grey);
+  height: 60px;
+  border: 2px solid var(--shadow);
+  background-color: var(--shadow);
 }
 .select2-container--default
   .select2-selection--single
@@ -792,17 +805,19 @@ span.option_notice.success {
   color: var(--light-gray-bold);
 }
 .select2-container .select2-selection[aria-expanded="true"] {
-  border-color: var(--primary-border);
+  border-color: var(--dark-alt);
 }
 .select2-container .select2-selection > span[role="textbox"] {
   font-weight: 600;
   color: var(--light-gray-bold);
+	padding-left: 10px;
 }
 .select2-container--default
   .select2-selection--single
   .select2-selection__arrow {
-  height: 47px;
+  height: 55px;
   width: 35px;
+	right: 10px;
 }
 select2-selection[aria-expanded="true"]
   .select2-container--default.select2-container--open
@@ -834,10 +849,7 @@ select2-selection[aria-expanded="true"]
 }
 .select2-container .select2-dropdown {
   border: 2px solid var(--light-gray-bold) transparent transparent transparent;
-  background: var(--dark-grey);
-}
-.select2-search--dropdown {
-  display: none;
+  background: var(--shadow);
 }
 .select2-container .select2-dropdown .select2-results ul li {
   line-height: 2.5em;
@@ -852,16 +864,23 @@ select2-selection[aria-expanded="true"]
   ul
   li.select2-results__option--highlighted {
   line-height: 2.5em;
-  font-weight: 600;
-  color: var(--dark-alt);
+  color: var(--bluish);
   background-color: transparent;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+	height: 50px;
+	background: var(--medium-gray);
+	border: 3px solid var(--dark-grey);
+	border-radius: 5px;
+	color: var(--light-gray-bold);
+	font-size: 1.1em;
 }
 .select2-container
   .select2-dropdown
   .select2-results
   ul
   li[aria-selected="true"] {
-  background-color: var(--bluish);
+  background-color: var(--dark-alt);
   color: var(--white);
 }
 .spin {

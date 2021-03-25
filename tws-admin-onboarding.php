@@ -201,8 +201,8 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 			$title   = __( 'Namespace Mismatch', 'tws-onboarding' );
 			$nons    = __( 'Namespace is not declared for the Onboarding Wizard Configuration file.', 'tws-onboarding' );
 			$message = __( 'Onboarding Config was instantiated with wrong namespace.', 'tws-onboarding' );
-			$nonote  = __( 'Use your plugin\'s unique namespace when instantiating <b>TheWebSolver_Onboarding_Wizard</b> and also declare the same namespace at the top of the <b>Config.php</b> and <b>Includes/Wizard.php</b> files.', 'tws-onboarding' );
-			$note    = __( 'Add same namespace that is passed when instantiating <b>TheWebSolver_Onboarding_Wizard</b> at top of the <b>Config.php</b> and <b>Includes/Wizard.php</b> files.', 'tws-onboarding' );
+			$nonote  = __( 'Use your plugin\'s unique namespace when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> and also declare the same namespace at the top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.', 'tws-onboarding' );
+			$note    = __( 'Add same namespace that is passed when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> at top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.', 'tws-onboarding' );
 			$passed  = __( 'Namespace currently passed is', 'tws-onboarding' );
 			$located = '';
 
@@ -240,36 +240,25 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 
 			// Only show directory information if user has given capability.
 			if ( isset( $user_caps[ $cap ] ) && $user_caps[ $cap ] ) {
-				$located = sprintf(
-					'<p>%1$s <b><em>%2$s</em></b></p>',
-					__( 'Files are located inside', 'tws-onboarding' ),
-					$dir
-				);
+				$located = sprintf( '%1$s <code><b><em>%2$s</em></b></code>', __( 'Files are located inside', 'tws-onboarding' ), $dir );
 			}
+
+			$allowed_html = array(
+				'b'    => array(),
+				'em'   => array(),
+				'code' => array(),
+			);
 
 			// Case where namespace might be an empty string.
 			if ( 0 === strlen( $ns ) ) {
 				return new WP_Error(
 					'namespace_not_declared',
 					sprintf(
-						'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p>%4$s',
+						'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p><p>%4$s</p>',
 						esc_html( $notitle ),
 						esc_html( $nons ),
-						wp_kses(
-							$nonote,
-							array(
-								'b'  => array(),
-								'br' => array(),
-							)
-						),
-						wp_kses(
-							$located,
-							array(
-								'p'  => array(),
-								'b'  => array(),
-								'em' => array(),
-							)
-						)
+						wp_kses( $nonote, $allowed_html ),
+						wp_kses( $located, $allowed_html )
 					),
 					esc_html( $notitle )
 				);
@@ -278,24 +267,11 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 			$error = new WP_Error(
 				'namespace_no_match',
 				sprintf(
-					'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p>%4$s<hr><p>%5$s <em><b>%6$s</b></em></p>',
+					'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p><p>%4$s</p><hr><p>%5$s <code><b><em>%6$s</em></b></code></p>',
 					esc_html( $title ),
 					esc_html( $message ),
-					wp_kses(
-						$note,
-						array(
-							'b'  => array(),
-							'br' => array(),
-						)
-					),
-					wp_kses(
-						$located,
-						array(
-							'p'  => array(),
-							'b'  => array(),
-							'em' => array(),
-						)
-					),
+					wp_kses( $note, $allowed_html ),
+					wp_kses( $located, $allowed_html ),
 					esc_html( $passed ),
 					esc_html( $namespace )
 				),

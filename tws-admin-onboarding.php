@@ -4,7 +4,7 @@
  *
  * @todo Make changes to todo tags, where assigned.
  *
- * @package TheWebSolver\Core\Admin\Onboarding
+ * @package TheWebSolver\Core\Admin\Onboarding\Class
  *
  * -----------------------------------
  * DEVELOPED-MAINTAINED-SUPPPORTED BY
@@ -108,6 +108,10 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 			$this->child_file = $src;
 			$this->child_name = $name;
 
+			// Include the web solver API abstraction class.
+			include_once __DIR__ . '/thewebsolver.php';
+
+			// Include core files.
 			include_once __DIR__ . '/Config.php';
 			include_once __DIR__ . '/Includes/Source/Onboarding.php';
 
@@ -115,12 +119,6 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				wp_die( $this->config()->get_error_message(), $this->config()->get_error_data() );
 			}
-
-			// WordPress Hook to start onboarding.
-			add_action( 'init', array( $this->config(), 'start_onboarding' ) );
-
-			// Include the web solver API abstraction class.
-			include_once __DIR__ . '/thewebsolver.php';
 		}
 
 		/**
@@ -197,25 +195,18 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 			$ns      = ltrim( $namespace, '\\' );
 			$config  = '\\' . $ns . '\\Config';
 			$dir     = ltrim( dirname( __FILE__ ), ABSPATH );
-			$notitle = __( 'Namespace not declared', 'tws-onboarding' );
-			$title   = __( 'Namespace Mismatch', 'tws-onboarding' );
-			$nons    = __( 'Namespace is not declared for the Onboarding Wizard Configuration file.', 'tws-onboarding' );
-			$message = __( 'Onboarding Config was instantiated with wrong namespace.', 'tws-onboarding' );
-			$nonote  = __( 'Use your plugin\'s unique namespace when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> and also declare the same namespace at the top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.', 'tws-onboarding' );
-			$note    = __( 'Add same namespace that is passed when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> at top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.', 'tws-onboarding' );
-			$passed  = __( 'Namespace currently passed is', 'tws-onboarding' );
 			$located = '';
 
-			// Prefix errors.
-			$prefix_title = __( 'Onboarding class prefix error', 'tws-onboarding' );
-			$prefix_msg   = sprintf(
-				'<h1>%1$s</h1><p>%2$s.</p><p>%3$s.</p>',
-				$prefix_title,
-				__( 'Use your plugin\'s same unique prefix passed when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> class to the onboarding wizard child-class private method <code><b><em>Onboarding_Wizard::config()</em></b></code> to get the config instance', 'tws-onboarding' ),
-				__( 'Default prefix <b><em>"myplugin-prefix"</em></b> is being used', 'tws-onboarding' )
-			);
-
 			if ( 'myplugin-prefix' === $prefix || '' === $prefix ) {
+				// Prefix errors.
+				$prefix_title = __( 'Onboarding class prefix error', 'tws-onboarding' );
+				$prefix_msg   = sprintf(
+					'<h1>%1$s</h1><p>%2$s.</p><p>%3$s.</p>',
+					$prefix_title,
+					__( 'Use your plugin\'s same unique prefix passed when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> class to the onboarding wizard child-class private method <code><b><em>Onboarding_Wizard::config()</em></b></code> to get the config instance', 'tws-onboarding' ),
+					__( 'Default prefix <b><em>"myplugin-prefix"</em></b> is being used', 'tws-onboarding' )
+				);
+
 				return new WP_Error(
 					'prefix_mismatch',
 					wp_kses(
@@ -251,6 +242,10 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 
 			// Case where namespace might be an empty string.
 			if ( 0 === strlen( $ns ) ) {
+				$notitle = __( 'Namespace not declared', 'tws-onboarding' );
+				$nons    = __( 'Namespace is not declared for the Onboarding Wizard Configuration file.', 'tws-onboarding' );
+				$nonote  = __( 'Use your plugin\'s unique namespace when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> and also declare the same namespace at the top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.', 'tws-onboarding' );
+
 				return new WP_Error(
 					'namespace_not_declared',
 					sprintf(
@@ -263,6 +258,11 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 					esc_html( $notitle )
 				);
 			}
+
+			$title   = __( 'Namespace Mismatch', 'tws-onboarding' );
+			$message = __( 'Onboarding Config was instantiated with wrong namespace.', 'tws-onboarding' );
+			$note    = __( 'Add same namespace that is passed when instantiating <code><b><em>TheWebSolver_Onboarding_Wizard</em></b></code> at top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.', 'tws-onboarding' );
+			$passed  = __( 'Namespace currently passed is', 'tws-onboarding' );
 
 			$error = new WP_Error(
 				'namespace_no_match',
@@ -278,6 +278,7 @@ if ( ! class_exists( 'TheWebSolver_Onboarding_Wizard' ) ) {
 				esc_html( $title )
 			);
 
+			// Check if validation is for this class or Config class.
 			if ( false === $config_file ) {
 				// Case where config file can't be called in given namespace.
 				if ( ! is_callable( array( $config, 'get' ) ) ) {

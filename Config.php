@@ -205,11 +205,9 @@ final class Config {
 	/**
 	 * Instantiates Onboarding Wizard class.
 	 *
-	 * Additional checks must be made as required.
-	 * For eg. Check for WordPress and PHP versions, etc.
+	 * This is hooked to WordPress `init` action.
 	 *
 	 * @since 1.0
-	 * @todo Use filter `hzfex_onboarding_check_before_redirect` for additional check before start.
 	 */
 	public function start_onboarding() {
 		// Only run on WordPress Admin.
@@ -231,7 +229,7 @@ final class Config {
 		 */
 		$redirect = apply_filters( 'hzfex_enable_onboarding_redirect', true, $this->get_prefix() );
 
-		// Start onboarding wizard if everything seems new and shiny!!!
+		// Start onboarding wizard if everything seems OKAYYYY!!!
 		if (
 			'yes' === get_transient( $this->get_prefix() . '_onboarding_redirect' ) &&
 			true === current_user_can( $this->get_capability() ) &&
@@ -337,11 +335,12 @@ final class Config {
 	 *
 	 * Singleton config class in this namespace.
 	 *
-	 * @param string $namespace  This file namespace. Prefix will be used all over onboarding setup.
-	 *                           {@todo MUST BE A UNIQUE NAMESPACE FOR YOUR PLUGIN}
-	 *                           It will be used for WordPress Hooks, Options, Transients, etc.
-	 *                           So, once set only change it if you are certain of the consequences.
+	 * If `$src` and `$name` is given, then onboarding will be instantiated from that classname, if valid.
+	 * {@see @method `Config::onboarding()`}.
+	 *
+	 * @param string $namespace  This file namespace. {@todo MUST BE A UNIQUE NAMESPACE FOR YOUR PLUGIN}.
 	 * @param string $prefix     Prefix for onboarding wizard. Only change once set if you know the consequences.
+	 *                           It will be used for WordPress Hooks, Options, Transients, etc.
 	 *                           {@todo MUST BE A UNIQUE PREFIX FOR YOUR PLUGIN}.
 	 * @param string $capability The current user capability who can manage onboarding.
 	 *                           {@todo CHANGE CAPABILITY ONLY IF ABSOLUTELY NECESSARY}.
@@ -385,6 +384,9 @@ final class Config {
 			// Set child-class name, breaking namespace supplied and just getting the class name.
 			$child_name         = explode( '\\', $name );
 			$config->child_name = array_pop( $child_name );
+
+			// WordPress Hook to start onboarding.
+			add_action( 'init', array( $config, 'start_onboarding' ) );
 		}
 
 		return $config;

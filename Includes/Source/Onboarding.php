@@ -61,7 +61,7 @@ abstract class Wizard {
 	protected $page;
 
 	/**
-	 * Onboarding assets URL.
+	 * The URL to the onboarding root.
 	 *
 	 * @var string
 	 *
@@ -100,6 +100,8 @@ abstract class Wizard {
 	 * Actions to be executed after the HTTP response has completed.
 	 *
 	 * @var array
+	 *
+	 * @since 1.0
 	 */
 	private $deferred_actions = array();
 
@@ -216,10 +218,13 @@ abstract class Wizard {
 	/**
 	 * Onboarding constructor.
 	 *
+	 * Everything happens at `init`. Always call `init` after initializing class!!!
+	 *
+	 * @see {@method `Wizard::init()`}
 	 * @since 1.0
 	 */
 	public function __construct() {
-		// Everything happens at `init`. Always call `init` after initializing class!!!
+		// See init().
 	}
 
 	/**
@@ -239,12 +244,11 @@ abstract class Wizard {
 	 * * manually deleting above key by any other means (maybe directly from database).
 	 *
 	 * Following properties are to be set in this method.
-	 * * @param string `$slug`     The plugin's slug on WordPress repository (aka directory name).
-	 * * @param string `$filename` The plugin's main file name.
-	 *                             Only needed if different than `$slug`.
-	 *                             Don't include the extension `.php`.
-	 * * @param string `$version`  The plugin's version to install. Useful if PHP and/or WordPress
-	 *                             not compatible with plugin's latest version. Defaults to `latest`.
+	 * * @property Wizard::$slug     - The plugin's slug on WordPress repository (aka directory name).
+	 * * @property Wizard::$filename - The plugin's main file name. Only needed if different than `$slug`.
+	 *                                 Don't include the extension `.php`.
+	 * * @property Wizard::$version  - The plugin's version to install. Useful if PHP and/or WordPress
+	 *                                 not compatible with plugin's latest version. Defaults to `latest`.
 	 *
 	 * @since 1.0
 	 * @example usage
@@ -325,8 +329,99 @@ abstract class Wizard {
 	abstract protected function set_logo();
 
 	/**
+	 * Sets onboarding steps.
+	 *
+	 * `introduction`, `recommended` and `ready` steps are created by default.
+	 * So, all steps display order will be:
+	 * * Intro step
+	 * * All other steps added by this method
+	 * * Recommended step
+	 * * Ready step.
+	 *
+	 * @return array
+	 *
+	 * @since 1.0
+	 */
+	abstract protected function set_steps();
+
+	/**
+	 * Sets the recommended plugins.
+	 *
+	 * The plugins data in an array.
+	 * * `string` `slug`  - The plugin slug (dirname).
+	 * * `string` `file`  - The plugin's main file name (excluding `.php`)
+	 * * `string` `title` - The plugin title/name.
+	 * * `string` `desc`  - The plugin description.
+	 * * `string` `logo`  - The plugin logo URL.
+	 * * `string` `alt`   - The plugin logo alt text.
+	 *
+	 * @since 1.0
+	 * @example usage
+	 * ```
+	 * namespace My_Plugin\My_Feature;
+	 * use TheWebSolver\Core\Admin\Onboarding\Wizard;
+	 *
+	 * // Lets assume our child-class is `Onboarding_Wizard` in above namespace.
+	 * class Onboarding_Wizard extends Wizard {
+	 *  protected function set_recommended_plugins() {
+	 *   $this->recommended = array(
+	 *    array(
+	 *     'slug'  => 'show-hooks',
+	 *     'file'  => 'show-hooks',
+	 *     'title' => __( 'Show Hooks', 'tws-onboarding' ),
+	 *     'desc'  => __( 'A sequential and visual representation of WordPess action and filter hooks.', 'tws-onboarding' ),
+	 *     'logo'  => 'https://ps.w.org/show-hooks/assets/icon-256x256.png?rev=2327503',
+	 *     'alt'   => __( 'Show Hooks Logo', 'tws-onboarding' ),
+	 *    ),
+	 *   // Another recommended plugin array args here.
+	 *   );
+	 *  }
+	 * }
+	 * ```
+	 */
+	protected function set_recommended_plugins() {}
+
+	/**
+	 * Resets (deletes) options added during onboarding.
+	 * ------------------------------------------------------------------------------
+	 * It will not delete options that are saved on child-class onboarding steps.\
+	 * It will only delete options saved for onboarding wizard purpose.
+	 * ------------------------------------------------------------------------------
+	 *
+	 * By default, it is set to an empty array. i.e. onboarding options will not be deleted by default.\
+	 * If `$this->reset` array values are passed as an exmaple below, then following options will be deleted.
+	 * * ***$this->prefix . '_onboarding_dependency_status'***
+	 * * ***$this->prefix . '_onboarding_dependency_name'***
+	 * * ***$this->prefix . '_get_onboarding_recommended_plugins_status'***
+	 * * ***$this->prefix . '_get_onboarding_recommended_plugins_checked_status'***.
+	 *
+	 * @since 1.0
+	 * @example usage
+	 * ```
+	 * namespace My_Plugin\My_Feature;
+	 * use TheWebSolver\Core\Admin\Onboarding\Wizard;
+	 *
+	 * // Lets assume our child-class is `Onboarding_Wizard` in above namespace.
+	 * class Onboarding_Wizard extends Wizard {
+	 *  protected function reset() {
+	 *   // Lets keep some options and delete some options. Just pass true/false for following.
+	 *   // true will delete option, false will not.
+	 *   $this->reset = array(
+	 *    'dependency_name'            => true,
+	 *    'dependency_status'          => true,
+	 *    'recommended_status'         => false,
+	 *    'recommended_checked_status' => true,
+	 *   );
+	 *  }
+	 * }
+	 * ```
+	 */
+	protected function reset() {}
+
+	/**
 	 * Initialize onboarding wizard.
 	 *
+	 * Always call this method after instantiating child class.
 	 * It will call all abstract methods and set respective properties.
 	 *
 	 * @since 1.0
@@ -339,11 +434,16 @@ abstract class Wizard {
 		$this->set_page();
 		$this->set_capability();
 		$this->set_logo();
-
 		$this->set_dependency();
+		$this->set_recommended_plugins();
+
 		if ( 0 < strlen( $this->slug ) ) {
 			$this->prepare_dependency();
 		}
+
+		// Exclude dependency plugin from recommended, if included. Don't think it's a good idea to do so.
+		$filtered          = array_filter( $this->recommended, array( $this, 'exclude_dependency_from_recommended' ) );
+		$this->recommended = $filtered;
 
 		// Prepare admin user to have the given capability.
 		add_filter( 'user_has_cap', array( $this, 'add_user_capability' ) );
@@ -413,6 +513,19 @@ abstract class Wizard {
 	}
 
 	/**
+	 * Filters out dependency plugin from recommended plugin.
+	 *
+	 * This is to prevent showing dependency plugin in list of recommended plugins too.
+	 *
+	 * @param array $plugin The current recommended plugin.
+	 *
+	 * @since 1.0
+	 */
+	public function exclude_dependency_from_recommended( $plugin ) {
+		return $plugin['slug'] !== $this->slug;
+	}
+
+	/**
 	 * Gives admin the capability needed.
 	 *
 	 * @param array $capabilities The current user capabilities.
@@ -458,10 +571,6 @@ abstract class Wizard {
 		}
 
 		$this->get_all_steps();
-		$this->set_recommended_plugins();
-
-		$filtered          = array_filter( $this->recommended, array( $this, 'exclude_dependency_from_recommended' ) );
-		$this->recommended = $filtered;
 
 		// Remove recommended step if no data or user has no permission.
 		if ( 0 === count( $this->recommended ) || ! current_user_can( 'install_plugins' ) ) {
@@ -484,19 +593,6 @@ abstract class Wizard {
 		$this->set_step_content();
 		$this->set_step_footer();
 		exit;
-	}
-
-	/**
-	 * Filters out dependency plugin from recommended plugin.
-	 *
-	 * This is to prevent showing dependency plugin in list of recommended plugins too.
-	 *
-	 * @param array $plugin The current recommended plugin.
-	 *
-	 * @since 1.0
-	 */
-	public function exclude_dependency_from_recommended( $plugin ) {
-		return $plugin['slug'] !== $this->slug;
 	}
 
 	/**
@@ -542,22 +638,6 @@ abstract class Wizard {
 		 */
 		$this->steps = apply_filters( 'hzfex_set_onboarding_steps', $all_steps, $this->prefix );
 	}
-
-	/**
-	 * Sets onboarding steps.
-	 *
-	 * `introduction`, `recommended` and `ready` steps are created by default.
-	 * So, all steps display order will be:
-	 * * Intro step
-	 * * All other steps added by this method
-	 * * Recommended step
-	 * * Ready step.
-	 *
-	 * @return array
-	 *
-	 * @since 1.0
-	 */
-	abstract protected function set_steps();
 
 	/**
 	 * Sets steps header HTML.
@@ -865,43 +945,6 @@ abstract class Wizard {
 	}
 
 	/**
-	 * Sets the recommended plugins.
-	 *
-	 * The plugins data in an array.
-	 * * `string` `slug`  - The plugin slug (dirname).
-	 * * `string` `file`  - The plugin's main file name (excluding `.php`)
-	 * * `string` `title` - The plugin title/name.
-	 * * `string` `desc`  - The plugin description.
-	 * * `string` `logo`  - The plugin logo URL.
-	 * * `string` `alt`   - The plugin logo alt text.
-	 *
-	 * @since 1.0
-	 * @example usage
-	 * ```
-	 * namespace My_Plugin\My_Feature;
-	 * use TheWebSolver\Core\Admin\Onboarding\Wizard;
-	 *
-	 * // Lets assume our child-class is `Onboarding_Wizard` in above namespace.
-	 * class Onboarding_Wizard extends Wizard {
-	 *  protected function set_recommended_plugins() {
-	 *   $this->recommended = array(
-	 *    array(
-	 *     'slug'  => 'show-hooks',
-	 *     'file'  => 'show-hooks',
-	 *     'title' => __( 'Show Hooks', 'tws-onboarding' ),
-	 *     'desc'  => __( 'A sequential and visual representation of WordPess action and filter hooks.', 'tws-onboarding' ),
-	 *     'logo'  => 'https://ps.w.org/show-hooks/assets/icon-256x256.png?rev=2327503',
-	 *     'alt'   => __( 'Show Hooks Logo', 'tws-onboarding' ),
-	 *    ),
-	 *   // Another recommended plugin array args here.
-	 *   );
-	 *  }
-	 * }
-	 * ```
-	 */
-	protected function set_recommended_plugins() {}
-
-	/**
 	 * Gets the recommended plugin step's view.
 	 *
 	 * @since 1.0
@@ -1111,43 +1154,6 @@ abstract class Wizard {
 
 		<?php
 	}
-
-	/**
-	 * Resets (deletes) options added during onboarding.
-	 * ------------------------------------------------------------------------------
-	 * It will not delete options that are saved on child-class onboarding steps.\
-	 * It will only delete options saved for onboarding wizard purpose.
-	 * ------------------------------------------------------------------------------
-	 *
-	 * By default, it is set to an empty array. i.e. onboarding options will not be deleted by default.\
-	 * If `$this->reset` array values are passed as an exmaple below, then following options will be deleted.
-	 * * ***$this->prefix . '_onboarding_dependency_status'***
-	 * * ***$this->prefix . '_onboarding_dependency_name'***
-	 * * ***$this->prefix . '_get_onboarding_recommended_plugins_status'***
-	 * * ***$this->prefix . '_get_onboarding_recommended_plugins_checked_status'***.
-	 *
-	 * @since 1.0
-	 * @example usage
-	 * ```
-	 * namespace My_Plugin\My_Feature;
-	 * use TheWebSolver\Core\Admin\Onboarding\Wizard;
-	 *
-	 * // Lets assume our child-class is `Onboarding_Wizard` in above namespace.
-	 * class Onboarding_Wizard extends Wizard {
-	 *  protected function reset() {
-	 *   // Lets keep some options and delete some options. Just pass true/false for following.
-	 *   // true will delete option, false will not.
-	 *   $this->reset = array(
-	 *    'dependency_name'            => true,
-	 *    'dependency_status'          => true,
-	 *    'recommended_status'         => false,
-	 *    'recommended_checked_status' => true,
-	 *   );
-	 *  }
-	 * }
-	 * ```
-	 */
-	protected function reset() {}
 
 	/**
 	 * Sets onboarding final step.

@@ -144,7 +144,7 @@ final class Onboarding {
 		}
 
 		// Now onboarding will run on the basis of check parameter passed.
-		// If this is first activation or PHP < 7.0 => redirect to onboarding page.
+		// If this is first activation or PHP > 7.0 => redirect to onboarding page.
 		// Lets also verify if config has been instantiated.
 		if ( is_object( $this->config ) ) {
 			$this->config->enable_onboarding( $check );

@@ -15,5 +15,31 @@
 			"name": "hsehszroc",
 			"email": "shesh@thewebsolver.com"
 		}
-	]
+	],
+	"homepage": "https://github.com/TheWebSolver/tws-admin-onboarding#readme",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/TheWebSolver/tws-admin-onboarding.git"
+	},
+	"bugs": {
+    "url": "https://github.com/TheWebSolver/tws-admin-onboarding/issues"
+  },
+	"devDependencies": {
+		"eslint": "^6.8.0"
+	},
+	"eslintConfig": {
+    "root": true,
+    "env": {
+			"browser": true,
+			"es2021": true
+		},
+		"extends": "eslint:recommended",
+		"parserOptions": {
+				"ecmaVersion": 12
+		},
+    "globals": {
+      "jQuery": "readonly",
+      "tws_ob": "readonly"
+    }
+  }
 }

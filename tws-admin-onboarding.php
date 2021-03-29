@@ -109,10 +109,10 @@ final class Onboarding {
 	public function onboarding_notice() {
 		$msg = sprintf(
 			'<p><b>%1$s</b> - %2$s.</p><p><a href="%3$s" class="button-primary">%4$s</a></p>',
-			__( 'Namaste! from The Web Solver Onboarding Wizard', 'tws-woopas' ),
-			__( 'Let us help you quickly setup the plugin with our onboarding wizard', 'tws-woopas' ),
+			__( 'Namaste! from The Web Solver Onboarding Wizard', 'tws-onboarding' ),
+			__( 'Let us help you quickly setup the plugin with our onboarding wizard', 'tws-onboarding' ),
 			admin_url( 'admin.php?page=' . $this->config->get_page() ),
-			__( 'Run the Wizard Now', 'tws-woopas' )
+			__( 'Run the Wizard Now', 'tws-onboarding' )
 		);
 
 		echo '<div class="notice notice-info">' . wp_kses_post( $msg ) . '</div>';

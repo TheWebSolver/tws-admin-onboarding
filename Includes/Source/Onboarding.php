@@ -529,7 +529,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		 * @since 1.0
 		 */
 		public function exclude_dependency_from_recommended( $plugin ) {
-			return $plugin['slug'] !== $this->slug;
+			return isset( $plugin['slug'] ) && $plugin['slug'] !== $this->slug;
 		}
 
 		/**
@@ -903,7 +903,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 
 			$slug      = isset( $post['slug'] ) && ! empty( $post['slug'] ) ? $post['slug'] : 'false';
 			$file      = isset( $post['file'] ) && ! empty( $post['file'] ) ? $post['file'] : 'false';
-			$version   = isset( $post['version'] ) && ! empty( $post['version'] ) ? $post['version'] : $this->version;
+			$version   = isset( $post['version'] ) && ! empty( $post['version'] ) ? $post['version'] : 'false';
 			$name      = isset( $post['name'] ) && ! empty( $post['name'] ) ? $post['name'] : $this->name;
 			$prefix    = isset( $post['prefix'] ) && ! empty( $post['prefix'] ) ? $post['prefix'] : $this->prefix;
 			$installed = isset( $post['installed'] ) && is_bool( $post['installed'] ) ? $post['installed'] : $this->is_installed;

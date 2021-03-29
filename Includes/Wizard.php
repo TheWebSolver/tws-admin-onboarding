@@ -21,7 +21,12 @@
  * ╚═╝      ╚═╝    ═══════════════╝
  */
 
-namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. @todo MUST REPLACE AND USE YOUR OWN.
+/**
+ * Onboarding namespace.
+ *
+ * @todo MUST REPLACE AND USE OWN NAMESPACE.
+ */
+namespace My_Plugin\My_Feature;
 
 use TheWebSolver\Core\Admin\Onboarding\Wizard;
 
@@ -66,7 +71,7 @@ class Onboarding_Wizard extends Wizard {
 	 * Resets (deletes) options added during onboarding.
 	 * ------------------------------------------------------------------------------
 	 * It will not delete options that are saved on child-class onboarding steps.\
-	 * It will only delete options saved for onboarding wizard purpose.
+	 * It will only delete options saved for onboarding purpose.
 	 * ------------------------------------------------------------------------------
 	 *
 	 * By default, it is set to an empty array. i.e. onboarding options will not be deleted by default.\
@@ -103,7 +108,7 @@ class Onboarding_Wizard extends Wizard {
 		// true will delete option, false will not.
 		$this->reset = array(
 			'dependency_name'            => false,
-			'dependency_status'          => false,
+			'dependency_status'          => true,
 			'recommended_status'         => false,
 			'recommended_checked_status' => false,
 		);
@@ -131,9 +136,9 @@ class Onboarding_Wizard extends Wizard {
 	 * @inheritDoc
 	 */
 	protected function set_dependency() {
-		$this->slug     = 'woocommerce';
-		$this->filename = 'woocommerce'; // Not needed as it is same as slug. Included as an example.
-		$this->version  = '4.0.0'; // Not needed if latest to install. Can be: '4.9.2', '4.5.0', '4.0.0' etc.
+		$this->slug     = 'query-monitor';
+		$this->filename = 'query-monitor'; // Not needed as it is same as slug. Included as an example.
+		$this->version  = '3.6.0'; // Not needed if latest to install. Can be: '3.3.3', '2.17.0', '2.6.9' etc (https://plugins.trac.wordpress.org/browser/query-monitor/#tags).
 	}
 
 	/**
@@ -179,7 +184,7 @@ class Onboarding_Wizard extends Wizard {
 	 * @inheritDoc
 	 */
 	protected function set_title() {
-		$this->title = __( 'MyPlugin Onboarding', 'tws-onboarding' );
+		$this->title = __( 'Thewebsolver &rsaquo; Onboarding', 'tws-onboarding' );
 	}
 
 	/**
@@ -210,10 +215,8 @@ class Onboarding_Wizard extends Wizard {
 	/**
 	 * Onboarding steps.
 	 *
-	 * @todo Set your own onboarding steps.
-	 *       `Introduction`, `Recommended` and `Ready` steps are default will be handled automatically.
-	 *       These default steps have filters to change the contents.
-	 *       and those filters will be displayed on respective step page.
+	 * @todo Set your own onboarding steps.\
+	 *       `Introduction`, `Recommended` and `Ready` steps have action and filter hooks to change the contents.
 	 * @inheritDoc
 	 */
 	protected function set_steps() {
@@ -226,7 +229,8 @@ class Onboarding_Wizard extends Wizard {
 			),
 			'front'   => array(
 				'name' => __( 'Radio/Select Fields', 'tws-onboarding' ),
-				'desc' => __( 'Radio and select dropdown form fields step subtitle displayed in the onboarding steps.', 'tws-onboarding' ),
+				// Disabling description for this step.
+				// 'desc' => __( 'Radio and select dropdown form fields step subtitle displayed in the onboarding steps.', 'tws-onboarding' ), // phpcs:ignore -- Valid Code OK.
 				'view' => array( $this, 'radio_select_form_view' ),
 				'save' => array( $this, 'radio_select_form_save' ),
 			),
@@ -362,7 +366,7 @@ class Onboarding_Wizard extends Wizard {
 			<fieldset class="hz_control_field hz_radio_field">
 				<label for="radio_input"><?php esc_html_e( 'Radio Input', 'tws-onboarding' ); ?></label>
 				<p class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this radio input field in order for card toggle control to work.', 'tws-onboarding' ); ?></p>
-				<span class="option_notice alert desc"><?php esc_html_e( 'Waring: If same structure is not used, the card control won\'t work.', 'tws-onboarding' ); ?></span>
+				<span class="option_notice alert desc"><?php esc_html_e( 'Warning: If same structure is not used, the card control won\'t work.', 'tws-onboarding' ); ?></span>
 				<ul class="hz_card_control">
 					<li class="hz_card_control_wrapper">
 						<label for="radio_input_first" class="hz_card_control">
@@ -415,7 +419,7 @@ class Onboarding_Wizard extends Wizard {
 			<fieldset class="hz_select_control hz_select_control_wrapper">
 				<label for="select_dropdown"><?php esc_html_e( 'Advanced select field', 'tws-onboarding' ); ?></label>
 				<p class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this select dropdown field in order for select2 to work.', 'tws-onboarding' ); ?></p>
-				<select id="select_dropdown" class="hz_select hz_select_control widefat" name="select_dropdown">
+				<select id="select_dropdown" class="hz_select hz_select_control widefat" name="select_dropdown" data-control="select">
 					<option value=""></option>
 					<option value="first_option" <?php selected( $select, 'first_option' ); ?>><?php esc_attr_e( 'First Option', 'tws-onboarding' ); ?></option>
 					<option value="second_option" <?php selected( $select, 'second_option' ); ?>><?php esc_attr_e( 'Second Option', 'tws-onboarding' ); ?></option>

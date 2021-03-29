@@ -20,10 +20,15 @@
  * ╚═╝      ╚═╝    ═══════════════╝
  */
 
-namespace My_Plugin\My_Feature; // phpcs:ignore -- Namespace Example. @todo MUST REPLACE AND USE YOUR OWN.
+/**
+ * Onboarding namespace.
+ *
+ * @todo MUST REPLACE AND USE OWN NAMESPACE.
+ */
+namespace My_Plugin\My_Feature;
 
 use stdClass;
-use TheWebSolver_Onboarding_Wizard;
+use WP_Error;
 use TheWebSolver\Core\Admin\Onboarding\Wizard;
 
 // Exit if accessed directly.
@@ -40,7 +45,7 @@ final class Config {
 	 *
 	 * @since 1.0
 	 */
-	private $prefix = 'myplugin-prefix';
+	private $prefix = 'thewebsolver';
 
 	/**
 	 * The user capability who can access onboarding.
@@ -114,7 +119,8 @@ final class Config {
 	 * NOTE: WITHOUT USING THIS, ONBOARDING WIZARD WILL NOT REDIRECT AFTER PLUGIN ACTIVATION.
 	 *
 	 * By default a filter is created to enable/disable onboarding.
-	 * Onboarding can then be turned off using this filter.
+	 * Onboarding can then be turned off using this filter.\
+	 * FILTER IS USEFUL FOR END-USERS TO ENABLE/DISABLE ONBOARDING WIZARD.
 	 *
 	 * Additional checks must be made as required.
 	 * For eg. Saving an option during installation and checking whether that option exists.
@@ -123,50 +129,11 @@ final class Config {
 	 * @param string[] $check Validation before enabling onboarding during plugin activation.
 	 *                        Must have all values as `true` *(in string, not bool)* to pass the check.
 	 *
+	 * @see Onboarding::activate()
 	 * @link https://developer.wordpress.org/reference/functions/register_activation_hook/
 	 * @since 1.0
-	 * @example usage
-	 * ```
-	 * // Let's assume we have main plugin file "myplugin.php"
-	 *
-	 * // First include the Onboarding Wizard main file like this:
-	 * include_once 'my-plugin/path-to/tws-admin-onboarding.php';
-	 *
-	 * // Here, lets assume you want your onboarding namespace as "My_Plugin\Onboarding" and have already set it at top of "Config.php" and "Includes/Wizard.php" file.
-	 *
-	 * // NOTE: Namespace must be same in these two files. Default namespace is set as "My_Plugin\My_Feature" for "Config.php" and "Includes/Wizard.php" file. Replace it with "My_Plugin\Onboarding" for this example.
-	 *
-	 * // Lets instantiate the onboarding wizard.
-	 * $onboarding = new TheWebSolver_Onboarding_Wizard( 'My_Plugin\Onboarding' );
-	 *
-	 * // Use it with register activation hook like this:
-	 * register_activation_hook( __FILE__, 'activate_function' );
-	 * function activate_function() {
-	 *  // Check if plugin is already installed.
-	 *  $old_install = get_option( 'myplugin_install_version', false );
-	 *
-	 *  if ( ! $old_install ) {
-	 *   // if new install => enable onboarding.
-	 *   $check[] = 'true';
-	 *
-	 *   // Set the plugin install version to "1.0".
-	 *   update_option( 'myplugin_install_version', '1.0' );
-	 *  } else {
-	 *   //  There is now installed version "1.0" => disable onboarding.
-	 *   $check[] = 'false';
-	 *  }
-	 *
-	 *  // If PHP version less than or equal to "7.0" => disable onboarding.
-	 *  if ( version_compare( phpversion(), '7.0', '<=' ) ) {
-	 *   $check[] = 'false';
-	 *  }
-	 *
-	 *  // Now onboarding will run on the basis of check parameter passed. This prevents enabling onboarding on each activation except first time and if version compare succeeds.
-	 *  $onboarding->config()->enable_onboarding( $check );
-	 * }
-	 * ```
 	 * @todo Use this with function registered at activation hook.
-	 *       For more info: {@see function `register_activation_hook()`).
+	 *       For more info: {@see register_activation_hook()).
 	 */
 	public function enable_onboarding( array $check ) {
 		/**
@@ -248,8 +215,11 @@ final class Config {
 	 * @since 1.0
 	 */
 	public function init() {
-		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$current_page = isset( $_GET['page'] ) ? wp_unslash( $_GET['page'] ) : false;
+		// phpcs:disable WordPress.Security.NonceVerification
+		$get             = wp_unslash( $_GET );
+		$current_page    = isset( $get['page'] ) ? $get['page'] : false;
+		$multi_activated = isset( $get['activate-multi'] );
+		// phpcs:enable WordPress.Security.NonceVerification
 
 		// Bail early on these events.
 		if ( wp_doing_ajax() || is_network_admin() ) {
@@ -257,8 +227,7 @@ final class Config {
 		}
 
 		// Bail if on onboarding page or multiple-plugins activated at once.
-		// phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		if ( $this->get_page() === $current_page || isset( $_GET['activate-multi'] ) ) {
+		if ( $this->get_page() === $current_page || $multi_activated ) {
 			delete_transient( $this->get_prefix() . '_onboarding_redirect' );
 			return;
 		}
@@ -338,7 +307,6 @@ final class Config {
 	 * If `$src` and `$name` is given, then onboarding will be instantiated from that classname, if valid.
 	 * {@see @method `Config::onboarding()`}.
 	 *
-	 * @param string $namespace  This file namespace. {@todo MUST BE A UNIQUE NAMESPACE FOR YOUR PLUGIN}.
 	 * @param string $prefix     Prefix for onboarding wizard. Only change once set if you know the consequences.
 	 *                           It will be used for WordPress Hooks, Options, Transients, etc.
 	 *                           {@todo MUST BE A UNIQUE PREFIX FOR YOUR PLUGIN}.
@@ -358,12 +326,11 @@ final class Config {
 	 * @since 1.0
 	 * @static
 	 */
-	public static function get( string $namespace, string $prefix, string $capability = 'manage_options', $src = '', string $name = '' ) {
+	public static function get( string $prefix, string $capability = 'manage_options', $src = '', string $name = '' ) {
 		static $config = false;
 
-		$namespace = TheWebSolver_Onboarding_Wizard::validate( $namespace, $capability, $prefix, true, __NAMESPACE__ );
+		$namespace = self::validate( $capability, $prefix );
 
-		// Don't let bypassing config namespace error if config is instantiated directly.
 		if ( is_wp_error( $namespace ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			wp_die( $namespace->get_error_message(), $namespace->get_error_data() );
@@ -385,11 +352,123 @@ final class Config {
 			$child_name         = explode( '\\', $name );
 			$config->child_name = array_pop( $child_name );
 
+			// Include the web solver API abstraction class.
+			include_once __DIR__ . '/thewebsolver.php';
+
+			// Include the main onboarding abstract class.
+			include_once __DIR__ . '/Includes/Source/Onboarding.php';
+
 			// WordPress Hook to start onboarding.
 			add_action( 'init', array( $config, 'start_onboarding' ) );
 		}
 
 		return $config;
+	}
+
+	/**
+	 * Validates namespace and prefix.
+	 *
+	 * @param string $cap    The current user capability.
+	 * @param string $prefix The onboarding wizard prefix.
+	 *
+	 * @return string|WP_Error Namespace if valid, `WP_Error` otherwise.
+	 *
+	 * @since 1.0
+	 * @static
+	 */
+	private static function validate( string $cap, string $prefix ) {
+		// Trim beginning slashes from namespace, if any, to exact match namespace.
+		$ns      = __NAMESPACE__;
+		$dir     = ltrim( dirname( __FILE__ ), ABSPATH ) . '/';
+		$located = '';
+		$default = 'My_Plugin\\My_Feature';
+
+		if ( ! function_exists( 'wp_get_current_user' ) ) {
+			include_once ABSPATH . 'wp-includes/pluggable.php';
+		}
+
+		$user_caps = wp_get_current_user()->allcaps;
+
+		// Only show directory information if user has given capability.
+		if ( isset( $user_caps[ $cap ] ) && $user_caps[ $cap ] ) {
+			$located = sprintf( '%1$s <code><b><em>%2$s</em></b></code>', __( 'Files are located inside directory:', 'tws-onboarding' ), $dir );
+		}
+
+		$allowed_html = array(
+			'b'    => array(),
+			'em'   => array(),
+			'code' => array(),
+		);
+
+		if ( 'thewebsolver' === $prefix || '' === $prefix ) {
+			// Prefix errors.
+			$prefix_title = __( 'Onboarding class prefix error', 'tws-onboarding' );
+			$prefix_msg   = sprintf(
+				'<h1>%1$s</h1><p>%2$s.</p><p>%3$s.</p><p>%4$s</p>',
+				$prefix_title,
+				__( 'Use your plugin\'s unique prefix for <code><b><em>Config::get()</em></b></code> to get the config instance', 'tws-onboarding' ),
+				__( 'Default prefix <b><em>"thewebsolver"</em></b> is being used', 'tws-onboarding' ),
+				wp_kses( $located, $allowed_html )
+			);
+
+			return new WP_Error(
+				'prefix_mismatch',
+				wp_kses(
+					$prefix_msg,
+					array(
+						'h1'   => array(),
+						'p'    => array(),
+						'b'    => array(),
+						'em'   => array(),
+						'code' => array(),
+					)
+				),
+				esc_html( $prefix_title )
+			);
+		}
+
+		$note = __( 'Set unique namespace to instantiate <code><b><em>Config::get()</em></b></code> and declare the same namespace at the top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.', 'tws-onboarding' );
+
+		// Case where namespace not declared.
+		if ( 0 === strlen( __NAMESPACE__ ) ) {
+			$notitle = __( 'Namespace not declared', 'tws-onboarding' );
+			$nons    = __( 'Onboarding Config was instantiated without namespace.', 'tws-onboarding' );
+
+			return new WP_Error(
+				'namespace_not_declared',
+				sprintf(
+					'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p><p>%4$s</p>',
+					esc_html( $notitle ),
+					esc_html( $nons ),
+					wp_kses( $note, $allowed_html ),
+					wp_kses( $located, $allowed_html )
+				),
+				esc_html( $notitle )
+			);
+		}
+
+		// Case where default namespace is being used.
+		if ( __NAMESPACE__ === $default ) {
+			$title   = __( 'Namespace Not Unique', 'tws-onboarding' );
+			$message = __( 'Onboarding Config was instantiated with default namespace.', 'tws-onboarding' );
+			$passed  = __( 'Change this default namespace:', 'tws-onboarding' );
+
+			return new WP_Error(
+				'namespace_no_match',
+				sprintf(
+					'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p><p>%4$s</p><hr><p>%5$s <code><b><em>%6$s</em></b></code></p>',
+					esc_html( $title ),
+					esc_html( $message ),
+					wp_kses( $note, $allowed_html ),
+					wp_kses( $located, $allowed_html ),
+					esc_html( $passed ),
+					esc_html( $default )
+				),
+				esc_html( $title )
+			);
+		}
+
+		return $ns;
 	}
 
 	/**

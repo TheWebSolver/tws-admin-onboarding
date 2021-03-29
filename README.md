@@ -214,6 +214,8 @@ Onboarding::start();
 Other steps added from the [wizard] file.
 ### Introduction
 ![Intro Step][intro]
+### Introduction (after install)
+![Intro post install][intro_post_install]
 ### Text/Checkbox Fields
 ![Text/Checkbox Step][text]
 ### Radio/Select Fields
@@ -244,6 +246,7 @@ DEVELOPED-MAINTAINED-SUPPPORTED BY
 [license-shield]: https://www.gnu.org/graphics/gplv3-or-later-sm.png
 [license-url]: https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/LICENSE
 [intro]: Assets/Screenshots/intro.png
+[intro_post_install]: Assets/Screenshots/intro-installed.png
 [text]: Assets/Screenshots/text.png
 [select]: Assets/Screenshots/select.png
 [recommended]: Assets/Screenshots/recommended.png

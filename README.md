@@ -16,10 +16,10 @@ https://www.markdownguide.org/basic-syntax/#reference-style-links
 
 Donate Link: https://paypal.me/gg1008
 
-<h3 align="center">WordPress Admin Onboarding Wizard</h3>
+<h1 align="center">WordPress Admin Onboarding Wizard</h1>
 <div align="center">
 	<p>
-		CREATE WORDPRESS ADMIN ONBOARDING WIZARD -|- INSTALLL DEPENDENCY/RECOMMENDED PLUGINS
+		CREATE WORDPRESS ADMIN ONBOARDING WIZARD -|- INSTALL DEPENDENCY/RECOMMENDED PLUGINS
 	</p>
 	<p>
 		This plugin is a framework meant for creating onboarding wizard for any plugins.
@@ -28,18 +28,32 @@ Donate Link: https://paypal.me/gg1008
 	</p>
 </div>
 
-### Example Code
+## Installation (via Composer)
+To install this plugin, edit your `composer.json` file:
+```json
+"require": {
+	"thewebsolver/tws-admin-onboarding": "dev-master"
+}
+```
+Then from terminal, run:
+```sh
+$ composer install
+```
+
+## Example Code
 >File [tws-admin-onboarding.php](https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/tws-admin-onboarding.php) contains all the codes to start onboarding on plugin activation. Mainly check `My_Plugin\My_Feature\Onboarding::activate` method on how to redirect to onboarding after plugin activation.
 
 Below is the extract of this file. You must use below codes in your own plugin file and delete the [tws-admin-onboarding.php](https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/tws-admin-onboarding.php) file.
 
-In brief, you must:
+### In brief, you must:
 - set your own plugin's prefix,
-- declare your own plugin's namespace in files [Config.php](https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/Config.php) and [Wizard.php](https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/Includes/Wizard.php), and
-- set your own step contents in [Wizard.php](https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/Includes/Wizard.php)
+- declare your own plugin's namespace in files [Config.php](https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/Config.php) and [Wizard.php](https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/Includes/Wizard.php),
+- set your own step contents in [Wizard.php](https://github.com/TheWebSolver/tws-admin-onboarding/blob/master/Includes/Wizard.php), and
+- check `@todo` tags across all files and make appropriate changes.
 
 ___
-#### NOTE: If no changes made to *namespace* and *prefix*, WordPress dies with appropriate message.
+### NOTE: Before plugin activation
+Must make changes to *namespace* and *prefix*. If no changes are made to *namespace* and *prefix*, WordPress dies with appropriate message.
 ___
 
 ```php
@@ -194,7 +208,7 @@ Onboarding::start();
 ```
 
 <!-- CONTACT -->
-### Contact
+## Contact
 
 ```sh
 ----------------------------------

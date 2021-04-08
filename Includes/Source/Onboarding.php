@@ -445,7 +445,11 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 			$this->set_recommended_plugins();
 
 			if ( 0 < strlen( $this->slug ) ) {
-				$this->prepare_dependency();
+				// Get dependency plugin status.
+				$filename           = '' !== $this->filename ? $this->filename : $this->slug;
+				$basename           = $this->slug . '/' . $filename . '.php';
+				$this->is_installed = TheWebSolver::maybe_plugin_is_installed( $basename );
+				$this->is_active    = TheWebSolver::maybe_plugin_is_active( $basename );
 			}
 
 			// Exclude dependency plugin from recommended, if included. Not a good idea to include same in both.
@@ -577,6 +581,10 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 				return;
 			}
 
+			if ( 0 < strlen( $this->slug ) ) {
+				$this->prepare_dependency();
+			}
+
 			$this->get_all_steps();
 
 			// Remove recommended step if no data or user has no permission.
@@ -665,9 +673,20 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 				wp_print_styles( 'onboarding_style' );
 				do_action( 'admin_print_styles' );
 				do_action( 'admin_head' );
+
+				/**
+				 * WPHOOK: Filter -> Body classes.
+				 *
+				 * @param string[] $classes Additional body classes in an array.
+				 * @param string   $prefix  The Onboarding prefix.
+				 * @var string[]
+				 * @since 1.0
+				 */
+				$classes = apply_filters( 'hzfex_onboarding_body_classes', array(), $this->prefix );
+				$classes = ! empty( $classes ) ? implode( ' ', $classes ) : '';
 				?>
 			</head>
-			<body class="onboarding admin-onboarding wp-core-ui <?php echo $this->is_installed ? ' tws-onboarding' : 'tws-onboarding-no'; ?>-<?php echo esc_attr( $this->slug ); ?>">
+			<body class="onboarding admin-onboarding wp-core-ui <?php echo $this->is_installed ? ' tws-onboarding' : ' no-dependency tws-onboarding-no'; ?>-<?php echo esc_attr( $this->slug ); ?><?php echo esc_attr( $classes ); ?>">
 				<!-- onboarding_header -->
 				<header id="onboarding_header" class="hz_flx row center">
 				<?php if ( $this->logo['src'] ) : ?>

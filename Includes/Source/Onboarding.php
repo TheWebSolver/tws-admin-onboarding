@@ -1376,7 +1376,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 			 * ```
 			 * add_filter( 'hzfex_register_onboarding_scripts', 'dependency_scripts', 10, 2 );
 			 * function dependency_scripts( array $handles, string $prefix ): array {
-			 *  // Check if prefix set in `Config::PREFIX` matches before proceeding.
+			 *  // Check if is our onboarding.
 			 *  if ( 'my-prefix' !== $prefix ) {
 			 *   return $handles;
 			 *  }
@@ -1451,7 +1451,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 			 * ```
 			 * add_filter( 'hzfex_register_onboarding_styles', 'dependency_styles', 10, 2 );
 			 * function dependency_styles( array $handles, string $prefix ): array {
-			 *  // Check if prefix set in `Config::PREFIX` matches before proceeding.
+			 *  // Check if is our onboarding.
 			 *  if ( 'my-prefix' !== $prefix ) {
 			 *   return $handles;
 			 *  }

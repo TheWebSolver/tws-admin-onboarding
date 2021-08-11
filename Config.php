@@ -95,12 +95,13 @@ final class Config {
 
 		// Create onboarding wizard from external child-class, if instance of abstract class "Wizard".
 		if ( $class instanceof Wizard ) {
-			$onboarding = (object) $class; // Typecasting to disable method call errors.
-
-			// Pass current config object if method exists in external child class.
-			if ( method_exists( $onboarding, 'set_config' ) && is_callable( array( $onboarding, 'set_config' ) ) ) {
-				$onboarding->set_config( $this );
-			}
+			/**
+			 * External onboarding wizard child-class.
+			 *
+			 * @var \TheWebSolver\Core\Admin\Onboarding\Wizard
+			 * */
+			$onboarding = $class;
+			$onboarding->set_config( $this );
 		} else {
 			// New shiny wizard creation from internal child-class.
 			include_once __DIR__ . '/Includes/Wizard.php';

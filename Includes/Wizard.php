@@ -43,31 +43,6 @@ defined( 'ABSPATH' ) || exit;
  */
 class Onboarding_Wizard extends Wizard {
 	/**
-	 * Onboarding config instance.
-	 *
-	 * @var object
-	 */
-	private $config;
-
-	/**
-	 * Sets an instance of Config in this namespace.
-	 *
-	 * @param object $instance The onboarding config instance.
-	 */
-	public function set_config( $instance ) {
-		$this->config = $instance;
-	}
-
-	/**
-	 * Gets the wizard config instance.
-	 *
-	 * @return Config
-	 */
-	private function config() {
-		return $this->config;
-	}
-
-	/**
 	 * Resets (deletes) options added during onboarding.
 	 * ------------------------------------------------------------------------------
 	 * It will not delete options that are saved on child-class onboarding steps.\
@@ -142,42 +117,6 @@ class Onboarding_Wizard extends Wizard {
 	}
 
 	/**
-	 * Sets onboarding prefix.
-	 *
-	 * @inheritDoc
-	 */
-	protected function set_prefix() {
-		$this->prefix = $this->config()->get_prefix();
-	}
-
-	/**
-	 * Sets onboarding page slug.
-	 *
-	 * @inheritDoc
-	 */
-	protected function set_page() {
-		$this->page = $this->config()->get_page();
-	}
-
-	/**
-	 * Sets onboarding root URL relative to current plugin's directory.
-	 *
-	 * @inheritDoc
-	 */
-	protected function set_url() {
-		$this->url = trailingslashit( $this->config()->get_url() );
-	}
-
-	/**
-	 * Sets onboarding root path relative to current plugin's directory.
-	 *
-	 * @inheritDoc
-	 */
-	protected function set_path() {
-		$this->path = $this->config()->get_path();
-	}
-
-	/**
 	 * Sets onboarding HTML head title.
 	 *
 	 * @todo Change your onboarding title.
@@ -185,15 +124,6 @@ class Onboarding_Wizard extends Wizard {
 	 */
 	protected function set_title() {
 		$this->title = __( 'Thewebsolver &rsaquo; Onboarding', 'tws-onboarding' );
-	}
-
-	/**
-	 * Sets user capability to run onboarding wizard.
-	 *
-	 * @inheritDoc
-	 */
-	protected function set_capability() {
-		$this->capability = $this->config()->get_capability();
 	}
 
 	/**
@@ -296,9 +226,9 @@ class Onboarding_Wizard extends Wizard {
 	 * Displays `general` step options.
 	 */
 	public function text_checkbox_view() {
-		$text     = get_option( 'myprefix_simple_input_value', 'Example text default value' );
-		$textarea = get_option( 'myprefix_textarea_value', '' );
-		$checkbox = get_option( 'myprefix_checkbox_value', 'off' );
+		$text     = get_option( $this->config->get_prefix() . '_simple_input_value', 'Example text default value' );
+		$textarea = get_option( $this->config->get_prefix() . '_textarea_value', '' );
+		$checkbox = get_option( $this->config->get_prefix() . '_checkbox_value', 'off' );
 		?>
 
 		<form method="POST">
@@ -345,9 +275,9 @@ class Onboarding_Wizard extends Wizard {
 		$textarea = ! empty( $options['textarea_input'] ) ? sanitize_textarea_field( $options['textarea_input'] ) : '';
 		$checkbox = ! empty( $options['checkbox_field'] ) ? sanitize_text_field( $options['checkbox_field'] ) : 'off';
 
-		update_option( 'myprefix_simple_input_value', $text );
-		update_option( 'myprefix_textarea_value', $textarea );
-		update_option( 'myprefix_checkbox_value', $checkbox );
+		update_option( $this->config->get_prefix() . '_simple_input_value', $text );
+		update_option( $this->config->get_prefix() . '_textarea_value', $textarea );
+		update_option( $this->config->get_prefix() . '_checkbox_value', $checkbox );
 
 		wp_safe_redirect( esc_url_raw( $this->get_next_step_link() ) );
 		exit;
@@ -357,8 +287,8 @@ class Onboarding_Wizard extends Wizard {
 	 * Displays `front` step Options.
 	 */
 	public function radio_select_form_view() {
-		$radio  = get_option( 'myprefix_radio_input', 'second_option' );
-		$select = get_option( 'myprefix_select_dropdown', 'third_option' );
+		$radio  = get_option( $this->config->get_prefix() . '_radio_input', 'second_option' );
+		$select = get_option( $this->config->get_prefix() . '_select_dropdown', 'third_option' );
 		?>
 
 		<form method="POST">
@@ -446,8 +376,8 @@ class Onboarding_Wizard extends Wizard {
 		$radio  = ! empty( $options['radio_input'] ) ? sanitize_text_field( $options['radio_input'] ) : 'first_option';
 		$select = ! empty( $options['select_dropdown'] ) ? sanitize_text_field( $options['select_dropdown'] ) : 'first_option';
 
-		update_option( 'myprefix_radio_input', $radio );
-		update_option( 'myprefix_select_dropdown', $select );
+		update_option( $this->config->get_prefix() . '_radio_input', $radio );
+		update_option( $this->config->get_prefix() . '_select_dropdown', $select );
 
 		wp_safe_redirect( esc_url_raw( $this->get_next_step_link() ) );
 		exit;

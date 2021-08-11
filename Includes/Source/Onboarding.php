@@ -44,31 +44,13 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		protected $prefix;
 
 		/**
-		 * The path to the onboarding root.
+		 * The current onboarding wizard configuration instance.
 		 *
-		 * @var string
+		 * @var object
 		 *
-		 * @since 1.0
+		 * @since 1.1
 		 */
-		protected $path;
-
-		/**
-		 * Onboarding page slug.
-		 *
-		 * @var string
-		 *
-		 * @since 1.0
-		 */
-		protected $page;
-
-		/**
-		 * The URL to the onboarding root.
-		 *
-		 * @var string
-		 *
-		 * @since 1.0
-		 */
-		protected $url;
+		protected $config;
 
 		/**
 		 * HTML head title.
@@ -229,6 +211,17 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		}
 
 		/**
+		 * Sets current onboarding wizard configuration instance.
+		 *
+		 * @param object $instance The current config instance in given namespace.
+		 *
+		 * @since 1.1
+		 */
+		public function set_config( $instance ) {
+			$this->config = $instance;
+		}
+
+		/**
 		 * Sets dependency plugin args.
 		 *
 		 * If any plugin is required i.e. if this plugin is dependent on any other plugin,
@@ -270,34 +263,6 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		protected function set_dependency() {}
 
 		/**
-		 * Sets onboarding prefix.
-		 *
-		 * @since 1.0
-		 */
-		abstract protected function set_prefix();
-
-		/**
-		 * Sets onboarding page slug.
-		 *
-		 * @since 1.0
-		 */
-		abstract protected function set_page();
-
-		/**
-		 * Sets onboarding root URL relative to current plugin's directory.
-		 *
-		 * @since 1.0
-		 */
-		abstract protected function set_url();
-
-		/**
-		 * Sets onboarding root path relative to current plugin's directory.
-		 *
-		 * @since 1.0
-		 */
-		abstract protected function set_path();
-
-		/**
 		 * Sets onboarding HTML head title.
 		 *
 		 * Override this to set own head title.
@@ -307,13 +272,6 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		protected function set_title() {
 			$this->title = __( 'TheWebSolver &rsaquo; Onboarding', 'tws-onboarding' );
 		}
-
-		/**
-		 * Sets user capability to run onboarding wizard.
-		 *
-		 * @since 1.0
-		 */
-		abstract protected function set_capability();
 
 		/**
 		 * Sets onboarding logo.
@@ -434,12 +392,9 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		 * @since 1.0
 		 */
 		public function init() {
-			$this->set_prefix();
-			$this->set_url();
-			$this->set_path();
+			$this->prefix = $this->config->get_prefix();
+
 			$this->set_title();
-			$this->set_page();
-			$this->set_capability();
 			$this->set_logo();
 			$this->set_dependency();
 			$this->set_recommended_plugins();
@@ -460,7 +415,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 			add_filter( 'user_has_cap', array( $this, 'add_user_capability' ) );
 
 			// Bail if user has no permission.
-			if ( ! current_user_can( $this->capability ) ) {
+			if ( ! current_user_can( $this->config->get_capability() ) ) {
 				return;
 			}
 
@@ -547,15 +502,15 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		 */
 		public function add_user_capability( $capabilities ) {
 			// Bail early if given cap is of admin.
-			if ( 'manage_options' === $this->capability ) {
+			if ( 'manage_options' === $this->config->get_capability() ) {
 				return $capabilities;
 			}
 
 			if (
 				! empty( $capabilities['manage_options'] ) &&
-				( ! isset( $capabilities[ $this->capability ] ) || true !== $capabilities[ $this->capability ] )
+				( ! isset( $capabilities[ $this->config->get_capability() ] ) || true !== $capabilities[ $this->config->get_capability() ] )
 				) {
-				$capabilities[ $this->capability ] = true;
+				$capabilities[ $this->config->get_capability() ] = true;
 			}
 
 			return $capabilities;
@@ -567,7 +522,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		 * @since 1.0
 		 */
 		public function add_page() {
-			$this->hook_suffix = add_dashboard_page( '', '', $this->capability, $this->page, '' );
+			$this->hook_suffix = add_dashboard_page( '', '', $this->config->get_capability(), $this->config->get_page(), '' );
 		}
 
 		/**
@@ -577,7 +532,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 		 */
 		public function start() {
 			// Bail early if not on setup page.
-			if ( empty( $_GET['page'] ) || $this->page !== $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+			if ( ! isset( $_GET['page'] ) || $this->config->get_page() !== $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				return;
 			}
 
@@ -593,12 +548,12 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 			}
 
 			// Get current step from all steps added to query arg.
-			$this->step = isset( $_GET['step'] ) ? sanitize_key( $_GET['step'] ) : current( array_keys( $this->steps ) ); // phpcs:ignore WordPress.Security.NonceVerification
+			$this->step = isset( $_GET['step'] ) ? sanitize_key( $_GET['step'] ) : current( array_keys( $this->steps ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 			$this->register_scripts();
 
 			// Save data of current step set with callback function on "save" key of that step.
-			if ( isset( $_POST['save_step'] ) && 'save_step' === $_POST['save_step'] && isset( $this->steps[ $this->step ]['save'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			if ( isset( $_POST['save_step'] ) && 'save_step' === $_POST['save_step'] && isset( $this->steps[ $this->step ]['save'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 				call_user_func_array( $this->steps[ $this->step ]['save'], array( $this ) );
 			}
 
@@ -888,7 +843,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 					<?php if ( 'pending' === $status ) : ?>
 						<p class="onboarding-dy-title"><?php echo wp_kses_post( $dy_title ); ?></p>
 					<?php endif; ?>
-					<?php TheWebSolver::get_template( 'dependency.php', $dependency_args, '', trailingslashit( $this->path ) . 'templates/' ); ?>
+					<?php TheWebSolver::get_template( 'dependency.php', $dependency_args, '', $this->config->get_path() . 'templates/' ); ?>
 					<?php
 				endif;
 			else :
@@ -1394,7 +1349,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 			*/
 			$script_handles = apply_filters( 'hzfex_register_onboarding_scripts', array( 'jquery', 'hzfex_select2' ), $this->prefix );
 
-			wp_register_script( 'onboarding_script', $this->url . 'Assets/onboarding.js', $script_handles, '1.0', false );
+			wp_register_script( 'onboarding_script', $this->config->get_url() . 'Assets/onboarding.js', $script_handles, '1.0', false );
 
 			$nonce_key    = $this->prefix . '_install_dep_key';
 			$nonce_action = $this->prefix . '_install_dep_action';
@@ -1468,7 +1423,7 @@ if ( ! class_exists( __NAMESPACE__ . '\\Wizard' ) ) {
 			 *```
 			*/
 			$style_handles = apply_filters( 'hzfex_register_onboarding_styles', array( 'hzfex_select2_style', 'googleFont' ), $this->prefix );
-			wp_register_style( 'onboarding_style', $this->url . 'Assets/onboarding.css', $style_handles, '1.0' );
+			wp_register_style( 'onboarding_style', $this->config->get_url() . 'Assets/onboarding.css', $style_handles, '1.0' );
 
 			/**
 			 * WPHOOK: Action -> fires after enqueue onboarding styles and scripts.

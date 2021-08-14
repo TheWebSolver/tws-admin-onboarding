@@ -138,7 +138,7 @@ class Onboarding_Wizard extends Wizard {
 			'alt'    => 'The Web Solver Onboarding',
 			'width'  => '135px',
 			'height' => 'auto',
-			'src'    => $this->url . 'Assets/onboarding.svg',
+			'src'    => $this->config->get_url() . 'Assets/onboarding.svg',
 		);
 	}
 

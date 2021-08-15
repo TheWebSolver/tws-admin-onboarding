@@ -81,6 +81,9 @@ button:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--primary-focus);
 }
+.ob-field {
+	margin-bottom: 3em;
+}
 fieldset {
   padding-inline: 0;
   padding-block: 0;
@@ -88,12 +91,11 @@ fieldset {
 	padding: 0;
 	margin-left: 0;
 	margin-right: 0;
-  margin-bottom: 30px;
+  margin-bottom: 0;
   border: none;
 }
 fieldset.onboarding-actions {
   margin-top: 60px;
-  margin-bottom: auto;
 }
 form .desc, .radio_subtitle {
   display: block;
@@ -529,14 +531,14 @@ textarea:focus {
   font-size: 0.95em;
   line-height: 1.6em;
 }
-span.option_notice {
+.option_notice {
   display: block;
   margin-top: 5px;
 }
-span.option_notice.alert {
+.ob-field .alert {
   color: var(--secondary-focus);
 }
-span.option_notice.success {
+.ob-field .success {
   color: var(--primary-focus);
 }
 .hz_flx .hz_flx_content {
@@ -702,7 +704,7 @@ span.option_notice.success {
 .hz_card_control_wrapper input:focus-visible + .hz_card_info {
 	border-color: var(--primary-defocus);
 }
-.hz_card_control_wrapper.hz_radio_selected .hz_card_info .radio_subtitle {
+.hz_card_control_wrapper.hz_radio_selected .hz_card_info * {
 	color: inherit;
 }
 .hz_onboarding_image_icon figure,
@@ -835,7 +837,12 @@ span.option_notice.success {
 .select2-container .select2-selection:focus {
 	outline: none !important;
 }
-.select2-container .select2-selection[aria-expanded="true"] {
+.select2-container .select2-dropdown.select2-dropdown--above,
+.select2-container.select2-container--below .select2-selection[aria-expanded="true"] {
+	border-bottom: none;
+}
+.select2-container .select2-dropdown.select2-dropdown--below,
+.select2-container.select2-container--above .select2-selection[aria-expanded="true"] {
 	border-top: none;
 }
 .select2-container .select2-selection > span[role="textbox"] {
@@ -880,7 +887,6 @@ select2-selection[aria-expanded="true"]
 }
 .select2-container .select2-dropdown {
   border: 2px solid var(--primary-focus);
-	border-bottom: none;
   background: var(--dark);
 }
 .select2-container--default .select2-results > .select2-results__options {

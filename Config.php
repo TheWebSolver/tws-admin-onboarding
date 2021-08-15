@@ -30,6 +30,7 @@ namespace My_Plugin\My_Feature;
 use stdClass;
 use WP_Error;
 use TheWebSolver\Core\Admin\Onboarding\Wizard;
+use TheWebSolver\Core\Admin\Onboarding\Form;
 
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
@@ -73,6 +74,15 @@ final class Config {
 	 * @since 1.0
 	 */
 	private $child_name;
+
+	/**
+	 * Onboarding form handler.
+	 *
+	 * @var Form
+	 *
+	 * @since 1.1
+	 */
+	public $form;
 
 	/**
 	 * Initializes onboarding wizard.
@@ -176,6 +186,7 @@ final class Config {
 	 * This is hooked to WordPress `init` action.
 	 *
 	 * @since 1.0
+	 * @since 1.1 Added form handler class.
 	 */
 	public function start_onboarding() {
 		// Only run on WordPress Admin.
@@ -184,6 +195,9 @@ final class Config {
 		}
 
 		$this->onboarding();
+
+		include_once __DIR__ . '/Includes/Source/Form.php';
+		$this->form = new Form( $this->prefix, $this->get_path() . 'templates/' );
 
 		/**
 		 * WPHOOK: Filter -> enable/disable onboarding redirect after plugin activation.

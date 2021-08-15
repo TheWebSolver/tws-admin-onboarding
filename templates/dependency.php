@@ -3,6 +3,7 @@
  * The Web Solver WordPress Admin Onboarding Wizard dependency plugin installation template.
  *
  * @package TheWebSolver\Core\Admin\Onboarding\Template
+ * @version 1.0
  *
  * -----------------------------------
  * DEVELOPED-MAINTAINED-SUPPPORTED BY

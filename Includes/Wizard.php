@@ -43,6 +43,17 @@ defined( 'ABSPATH' ) || exit;
  */
 class Onboarding_Wizard extends Wizard {
 	/**
+	 * Current config instance.
+	 *
+	 * Overriding parent property for Code Editors/IDE support.
+	 * This makes it easier to know all accessible properties and methods.
+	 *
+	 * @var \My_Plugin\My_Feature\Config
+	 * {@todo change this to the custom namespace set for this class above.}
+	 */
+	public $config;
+
+	/**
 	 * Resets (deletes) options added during onboarding.
 	 * ------------------------------------------------------------------------------
 	 * It will not delete options that are saved on child-class onboarding steps.\
@@ -83,7 +94,7 @@ class Onboarding_Wizard extends Wizard {
 		// true will delete option, false will not.
 		$this->reset = array(
 			'dependency_name'            => false,
-			'dependency_status'          => true,
+			'dependency_status'          => false,
 			'recommended_status'         => false,
 			'recommended_checked_status' => false,
 		);
@@ -226,40 +237,49 @@ class Onboarding_Wizard extends Wizard {
 	 * Displays `general` step options.
 	 */
 	public function text_checkbox_view() {
-		$text     = get_option( $this->config->get_prefix() . '_simple_input_value', 'Example text default value' );
-		$textarea = get_option( $this->config->get_prefix() . '_textarea_value', '' );
-		$checkbox = get_option( $this->config->get_prefix() . '_checkbox_value', 'off' );
-		?>
+		$this->config->form->start();
 
-		<form method="POST">
-			<!-- contents -->
-			<fieldset>
-				<label for="simple_input"><p><?php esc_html_e( 'Text Input', 'tws-onboarding' ); ?></p>
-					<input id="simple_input" type="text" name="simple_input" value="<?php echo esc_attr( $text ); ?>">
-				</label>
-			</fieldset>
-			<fieldset>
-				<label for="textarea_input"><p><?php esc_html_e( 'Textarea Input', 'tws-onboarding' ); ?></p>
-					<textarea id="textarea_input" name="textarea_input" rows="10" cols="50" placeholder="<?php esc_attr_e( 'Example placeholder&#13;Another feature in new line&#13;Last feature in new line&#13;and so on....', 'tws-onboarding' ); ?>"><?php echo esc_html( $textarea ); ?></textarea>
-				</label>
-			</fieldset>
-			<fieldset class="hz_control_field">
-				<p class="hz_switcher_control">
-					<label for="checkbox_field">
-						<span class="hz_switcher_label">
-							<?php esc_html_e( 'Checkbox Switch', 'tws-onboarding' ); ?>
-							<span class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this checkbox input field in order for switcher toggle control to work. If structure is different, then toggle button will not be created and default checkbox will be displayed.', 'tws-onboarding' ); ?></span>
-							<span class="option_notice alert desc"><?php esc_html_e( 'Alert: switcher control won\'t work if not used this same elements.', 'tws-onboarding' ); ?></span>
-						</span>
-						<input type="checkbox" class="hz_checkbox_input" id="checkbox_field" name="checkbox_field" class="hz_checkbox_input" data-control="switch" <?php checked( $checkbox, 'on', true ); ?>>
-						<span class="hz_switcher"></span>
-					</label>
-				</p>
-			</fieldset>
-			<!-- contents end -->
-			<?php $this->get_step_buttons(); // MUST USE THIS FOR NONCE AND SAVING THIS STEP DATA. ?>
-		</form>
+		?>
+		<!-- Form Fields -->
 		<?php
+
+		// Text input field.
+		$this->config->form->add_field(
+			'text',
+			array(
+				'id'          => 'first_ob_field',
+				'label'       => 'Text Input',
+				'placeholder' => 'Placeholder text',
+			)
+		);
+
+		// Textarea field.
+		$this->config->form->add_field(
+			'textarea',
+			array(
+				'id'    => 'second_ob_field',
+				'label' => 'Textarea Input',
+				'desc'  => '<div>A short description about the textarea field.</div><div class="option_notice success">This is a success notification.</div>',
+			)
+		);
+
+		// Checkbox/switch field.
+		$this->config->form->add_field(
+			'checkbox',
+			array(
+				'id'    => 'third_ob_field',
+				'label' => 'Checkbox Switch',
+				'desc'  => '<span>The checkbox HTML structure is designed with modern look with switcher control. </span><span class="alert">This is an alert notification.</span>',
+			)
+		);
+
+		?>
+		<!-- Form Fields end -->
+		<?php
+
+		$this->get_step_buttons(); // MUST USE THIS FOR NONCE AND SAVING THIS STEP DATA.
+
+		$this->config->form->end();
 	}
 
 	/**
@@ -268,16 +288,13 @@ class Onboarding_Wizard extends Wizard {
 	public function text_checkbox_save() {
 		$this->validate_save(); // MUST USE THIS FOR NONCE VERIFICATION.
 
-		$options = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
-
-		// Prepare options value to save.
-		$text     = ! empty( $options['simple_input'] ) ? sanitize_text_field( $options['simple_input'] ) : '';
-		$textarea = ! empty( $options['textarea_input'] ) ? sanitize_textarea_field( $options['textarea_input'] ) : '';
-		$checkbox = ! empty( $options['checkbox_field'] ) ? sanitize_text_field( $options['checkbox_field'] ) : 'off';
-
-		update_option( $this->config->get_prefix() . '_simple_input_value', $text );
-		update_option( $this->config->get_prefix() . '_textarea_value', $textarea );
-		update_option( $this->config->get_prefix() . '_checkbox_value', $checkbox );
+		$this->config->form->save(
+			array(
+				'first_ob_field'  => 'text',
+				'second_ob_field' => 'textarea',
+				'third_ob_field'  => 'checkbox',
+			)
+		);
 
 		wp_safe_redirect( esc_url_raw( $this->get_next_step_link() ) );
 		exit;
@@ -287,81 +304,50 @@ class Onboarding_Wizard extends Wizard {
 	 * Displays `front` step Options.
 	 */
 	public function radio_select_form_view() {
-		$radio  = get_option( $this->config->get_prefix() . '_radio_input', 'second_option' );
-		$select = get_option( $this->config->get_prefix() . '_select_dropdown', 'third_option' );
+		$this->config->form->start();
+
 		?>
-
-		<form method="POST">
-			<!-- contents -->
-			<fieldset class="hz_control_field hz_radio_field">
-				<label for="radio_input"><?php esc_html_e( 'Radio Input', 'tws-onboarding' ); ?></label>
-				<p class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this radio input field in order for card toggle control to work.', 'tws-onboarding' ); ?></p>
-				<span class="option_notice alert desc"><?php esc_html_e( 'Warning: If same structure is not used, the card control won\'t work.', 'tws-onboarding' ); ?></span>
-				<ul class="hz_card_control">
-					<li class="hz_card_control_wrapper">
-						<label for="radio_input_first" class="hz_card_control">
-							<input id="radio_input_first" type="radio" name="radio_input" class="hz_card_control" data-control="card" value="first_option" <?php checked( $radio, 'first_option' ); ?>>
-							<div class="hz_card_info hz_flx row center">
-								<div class="radio_option_content">
-									<p><?php esc_html_e( 'Radio input first option', 'tws-onboarding' ); ?></p>
-									<p class="radio_subtitle">
-										<?php
-										echo wp_kses(
-											sprintf(
-												__( '<b>First Option</b> is just for the demo purpose. This is just a long description explaining about the first option in this advanced radio field', 'tws-onboarding' ),
-											),
-											array( 'b' => array() )
-										);
-										?>
-									</p>
-								</div>
-								<div class="radio_option_image">
-									<img src="" alt="">
-								</div>
-							</div>
-						</label>
-					</li>
-					<li class="hz_card_control_wrapper">
-						<label for="radio_input_second" class="hz_card_control">
-							<input id="radio_input_second" type="radio" name="radio_input" class="hz_card_control" data-control="card" value="second_option" <?php checked( $radio, 'second_option' ); ?>>
-							<div class="hz_card_info hz_flx row center">
-								<div class="radio_option_content">
-									<p><?php esc_html_e( 'Radio input second option', 'tws-onboarding' ); ?></p>
-									<p class="radio_subtitle">
-										<?php
-										echo wp_kses(
-											sprintf(
-												__( '<b>Second Option</b> is just for the demo purpose. This is just a long description explaining about the second option in this advanced radio field', 'tws-onboarding' ),
-											),
-											array( 'b' => array() )
-										);
-										?>
-									</p>
-								</div>
-								<div class="radio_option_image">
-									<img src="" alt="">
-								</div>
-							</div>
-						</label>
-					</li>
-				</ul>
-			</fieldset>
-			<fieldset class="hz_select_control hz_select_control_wrapper">
-				<label for="select_dropdown"><?php esc_html_e( 'Advanced select field', 'tws-onboarding' ); ?></label>
-				<p class="desc"><?php esc_html_e( 'Use the same HTML elements and classes used for this select dropdown field in order for select2 to work.', 'tws-onboarding' ); ?></p>
-				<select id="select_dropdown" class="hz_select hz_select_control widefat" name="select_dropdown" data-control="select">
-					<option value=""></option>
-					<option value="first_option" <?php selected( $select, 'first_option' ); ?>><?php esc_attr_e( 'First Option', 'tws-onboarding' ); ?></option>
-					<option value="second_option" <?php selected( $select, 'second_option' ); ?>><?php esc_attr_e( 'Second Option', 'tws-onboarding' ); ?></option>
-					<option value="third_option" <?php selected( $select, 'third_option' ); ?>><?php esc_attr_e( 'Third Option', 'tws-onboarding' ); ?></option>
-					<option value="forth_option" <?php selected( $select, 'forth_option' ); ?>><?php esc_attr_e( 'Forth Option', 'tws-onboarding' ); ?></option>
-				</select>
-			</fieldset>
-			<!-- contents end -->
-
-			<?php $this->get_step_buttons( true ); // MUST USE THIS FOR NONCE AND SAVING THIS STEP DATA. ?>
-		</form>
+		<!-- Form Fields -->
 		<?php
+
+		// Radio buttons.
+		$this->config->form->add_field(
+			'radio',
+			array(
+				'id'      => 'fourth_ob_field',
+				'label'   => 'Dynamic Radio',
+				'desc'    => '<p>The radio field description. Use can use any valid HTML tag to style it as needed.</p>',
+				'options' => array(
+					'first'  => '<p>Radio input first option</p><div class="desc"><b>First Option</b> is just for the demo purpose. This is just a long description explaining about the first option in this advanced radio field.</div>',
+					'second' => '<p>Radio input second option</p><div class="desc"><b>Second Option</b> This can also be any valid HTML tag such as adding images.</div>',
+				),
+				'class'   => 'widefat', // make radio options 100% width.
+			)
+		);
+
+		// Select options.
+		$this->config->form->add_field(
+			'select',
+			array(
+				'id'      => 'fifth_ob_field',
+				'label'   => 'Dynamic Select',
+				'desc'    => '<p>The select field will be converted to advanced select field using select2 library.</p>',
+				'options' => array(
+					'first'  => 'First Option',
+					'second' => 'Second Option',
+					'third'  => 'Third Option',
+					'fourth' => 'Fourth Option',
+				),
+			)
+		);
+
+		?>
+		<!-- Form Fields end -->
+		<?php
+
+		$this->get_step_buttons( true ); // MUST USE THIS FOR NONCE AND SAVING THIS STEP DATA.
+
+		$this->config->form->end();
 	}
 
 	/**
@@ -370,14 +356,12 @@ class Onboarding_Wizard extends Wizard {
 	public function radio_select_form_save() {
 		$this->validate_save(); // MUST USE THIS FOR NONCE VERIFICATION.
 
-		$options = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification
-
-		// Prepare options value to save.
-		$radio  = ! empty( $options['radio_input'] ) ? sanitize_text_field( $options['radio_input'] ) : 'first_option';
-		$select = ! empty( $options['select_dropdown'] ) ? sanitize_text_field( $options['select_dropdown'] ) : 'first_option';
-
-		update_option( $this->config->get_prefix() . '_radio_input', $radio );
-		update_option( $this->config->get_prefix() . '_select_dropdown', $select );
+		$this->config->form->save(
+			array(
+				'fourth_ob_field' => 'radio',
+				'fifth_ob_field'  => 'select',
+			)
+		);
 
 		wp_safe_redirect( esc_url_raw( $this->get_next_step_link() ) );
 		exit;

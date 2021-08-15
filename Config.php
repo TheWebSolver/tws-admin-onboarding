@@ -363,9 +363,8 @@ final class Config {
 			// Set external child-class file.
 			$config->child_file = $src;
 
-			// Set child-class name, breaking namespace supplied and just getting the class name.
-			$child_name         = explode( '\\', $name );
-			$config->child_name = array_pop( $child_name );
+			// Set external child-class name.
+			$config->child_name = $name;
 
 			// Include the web solver API abstraction class.
 			include_once __DIR__ . '/thewebsolver.php';

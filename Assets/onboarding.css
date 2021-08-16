@@ -704,6 +704,9 @@ textarea:focus {
 .hz_card_control_wrapper input:focus-visible + .hz_card_info {
 	border-color: var(--primary-defocus);
 }
+.widefat .hz_card_control input + .hz_card_info {
+	width: 100%;
+}
 .hz_card_control_wrapper.hz_radio_selected .hz_card_info * {
 	color: inherit;
 }

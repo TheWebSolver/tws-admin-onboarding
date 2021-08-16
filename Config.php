@@ -29,6 +29,7 @@ namespace My_Plugin\My_Feature;
 
 use stdClass;
 use WP_Error;
+use Exception;
 use TheWebSolver\Core\Admin\Onboarding\Wizard;
 use TheWebSolver\Core\Admin\Onboarding\Form;
 
@@ -85,11 +86,22 @@ final class Config {
 	public $form;
 
 	/**
+	 * Onboarding instance.
+	 *
+	 * @var \TheWebSolver\Core\Admin\Onboarding\Wizard
+	 *
+	 * @since 1.1
+	 */
+	public $onboarding;
+
+	/**
 	 * Initializes onboarding wizard.
 	 *
-	 * @return object The external child-class onboarding instance if valid, `Onboarding_Wizard` if not.
-	 *
+	 * @throws Exception If `Config.php` and `Includes/Wizard.php`
+	 *                   file namespace didn't match.
 	 * @since 1.0
+	 * @since 1.1 Throws Exception and WP dies.
+	 * @since 1.1 Sets onboarding property instead of returning it.
 	 */
 	public function onboarding() {
 		// Prepare and instantiate external child-class, if valid.
@@ -115,13 +127,21 @@ final class Config {
 		} else {
 			// New shiny wizard creation from internal child-class.
 			include_once __DIR__ . '/Includes/Wizard.php';
-			$onboarding = new Onboarding_Wizard();
-			$onboarding->set_config( $this );
+			try {
+				if ( class_exists( __NAMESPACE__ . '\\Onboarding_Wizard' ) ) {
+					$onboarding = new Onboarding_Wizard();
+					$onboarding->set_config( $this );
+				} else {
+					throw new Exception( '<p>Namespace of <b>Config</b> and <b>Wizard</b> class does not match.</p><hr>Set same namespace used on <b>Config.php</b> file in <b>Includes/Wizard.php file</b> to instantiate <code><b><em>Onboarding_Wizard</em></b></code> class.' );
+				}
+			} catch ( Exception $e ) {
+				wp_die( wp_kses_post( $e->getMessage() ), 'Namespace Mismatch' );
+			}
 		}
 
 		$onboarding->init();
 
-		return $onboarding;
+		$this->onboarding = $onboarding;
 	}
 
 	/**

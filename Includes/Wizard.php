@@ -45,13 +45,11 @@ class Onboarding_Wizard extends Wizard {
 	/**
 	 * Current config instance.
 	 *
-	 * Overriding parent property for Code Editors/IDE support.
-	 * This makes it easier to know all accessible properties and methods.
+	 * @var Config Overriding property on child for IDE/Code Editor support.
 	 *
-	 * @var \My_Plugin\My_Feature\Config
-	 * {@todo change this to the custom namespace set for this class above.}
+	 * @since 1.1
 	 */
-	public $config;
+	protected $config;
 
 	/**
 	 * Resets (deletes) options added during onboarding.

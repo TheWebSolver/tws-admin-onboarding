@@ -224,17 +224,13 @@ final class Config {
 	/**
 	 * Starts onboarding.
 	 *
-	 * Voila!!! We are now at onboarding intro page.
-	 *
 	 * @see {@method `Config::start_onboarding()`}
 	 * @since 1.0
 	 */
 	public function init() {
-		// phpcs:disable WordPress.Security.NonceVerification
-		$get             = wp_unslash( $_GET );
+		$get             = wp_unslash( $_GET ); // phpcs:disable WordPress.Security.NonceVerification.Recommended
 		$current_page    = isset( $get['page'] ) ? $get['page'] : false;
 		$multi_activated = isset( $get['activate-multi'] );
-		// phpcs:enable WordPress.Security.NonceVerification
 
 		// Bail early on these events.
 		if ( wp_doing_ajax() || is_network_admin() ) {
@@ -249,6 +245,8 @@ final class Config {
 
 		// Once redirected, that's enough. Don't do it ever again.
 		delete_transient( $this->get_prefix() . '_onboarding_redirect' );
+
+		// Voila!!! We are now at onboarding intro page.
 		wp_safe_redirect( admin_url( 'admin.php?page=' . $this->get_page() ) );
 		exit;
 	}
@@ -347,8 +345,10 @@ final class Config {
 		$namespace = self::validate( $capability, $prefix );
 
 		if ( is_wp_error( $namespace ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			wp_die( $namespace->get_error_message(), $namespace->get_error_data() );
+			wp_die(
+				wp_kses_post( $namespace->get_error_message() ),
+				wp_kses_post( $namespace->get_error_data() )
+			);
 		}
 
 		if ( ! is_a( $config, get_class() ) ) {
@@ -388,6 +388,7 @@ final class Config {
 	 * @return string|WP_Error Namespace if valid, `WP_Error` otherwise.
 	 *
 	 * @since 1.0
+	 * @since 1.1 Removed translation support (info was only for developers).
 	 * @static
 	 */
 	private static function validate( string $cap, string $prefix ) {
@@ -405,81 +406,32 @@ final class Config {
 
 		// Only show directory information if user has given capability.
 		if ( isset( $user_caps[ $cap ] ) && $user_caps[ $cap ] ) {
-			$located = sprintf( '%1$s <code><b><em>%2$s</em></b></code>', __( 'Files are located inside directory:', 'tws-onboarding' ), $dir );
+			$located = sprintf( 'Files are located inside directory: <code><b><em>%1$s</em></b></code>', $dir );
 		}
-
-		$allowed_html = array(
-			'b'    => array(),
-			'em'   => array(),
-			'code' => array(),
-		);
 
 		if ( 'thewebsolver' === $prefix || '' === $prefix ) {
 			// Prefix errors.
-			$prefix_title = __( 'Onboarding class prefix error', 'tws-onboarding' );
-			$prefix_msg   = sprintf(
-				'<h1>%1$s</h1><p>%2$s.</p><p>%3$s.</p><p>%4$s</p>',
-				$prefix_title,
-				__( 'Use your plugin\'s unique prefix for <code><b><em>Config::get()</em></b></code> to get the config instance', 'tws-onboarding' ),
-				__( 'Default prefix <b><em>"thewebsolver"</em></b> is being used', 'tws-onboarding' ),
-				wp_kses( $located, $allowed_html )
-			);
+			$prefix_title = 'Onboarding class prefix error';
+			$prefix_msg   = sprintf( '<h1>%1$s</h1><p>Use your plugin\'s unique prefix for <code><b><em>Config::get()</em></b></code> to get the config instance.</p><p>Default prefix <b><em>"thewebsolver"</em></b> is being used.</p><p>%2$s</p>', $prefix_title, $located );
 
-			return new WP_Error(
-				'prefix_mismatch',
-				wp_kses(
-					$prefix_msg,
-					array(
-						'h1'   => array(),
-						'p'    => array(),
-						'b'    => array(),
-						'em'   => array(),
-						'code' => array(),
-					)
-				),
-				esc_html( $prefix_title )
-			);
+			return new WP_Error( 'prefix_mismatch', $prefix_msg, $prefix_title );
 		}
 
-		$note = __( 'Set unique namespace to instantiate <code><b><em>Config::get()</em></b></code> and declare the same namespace at the top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.', 'tws-onboarding' );
+		$note = 'Set unique namespace to instantiate <code><b><em>Config::get()</em></b></code> and declare the same namespace at the top of the <code><b><em>Config.php</em></b></code> and <code><b><em>Includes/Wizard.php</em></b></code> files.';
 
 		// Case where namespace not declared.
 		if ( 0 === strlen( __NAMESPACE__ ) ) {
-			$notitle = __( 'Namespace not declared', 'tws-onboarding' );
-			$nons    = __( 'Onboarding Config was instantiated without namespace.', 'tws-onboarding' );
+			$notitle = 'Namespace not declared';
+			$nons    = 'Onboarding Config was instantiated without namespace.';
 
-			return new WP_Error(
-				'namespace_not_declared',
-				sprintf(
-					'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p><p>%4$s</p>',
-					esc_html( $notitle ),
-					esc_html( $nons ),
-					wp_kses( $note, $allowed_html ),
-					wp_kses( $located, $allowed_html )
-				),
-				esc_html( $notitle )
-			);
+			return new WP_Error( 'namespace_not_declared', sprintf( '<h1>%1$s</h1><p>%2$s</p><p>%3$s</p><p>%4$s</p>', $notitle, $nons, $note, $located ), $notitle );
 		}
 
 		// Case where default namespace is being used.
 		if ( __NAMESPACE__ === $default ) {
-			$title   = __( 'Namespace Not Unique', 'tws-onboarding' );
-			$message = __( 'Onboarding Config was instantiated with default namespace.', 'tws-onboarding' );
-			$passed  = __( 'Change this default namespace:', 'tws-onboarding' );
+			$title = 'Namespace Not Unique';
 
-			return new WP_Error(
-				'namespace_no_match',
-				sprintf(
-					'<h1>%1$s</h1><p>%2$s</p><p>%3$s</p><p>%4$s</p><hr><p>%5$s <code><b><em>%6$s</em></b></code></p>',
-					esc_html( $title ),
-					esc_html( $message ),
-					wp_kses( $note, $allowed_html ),
-					wp_kses( $located, $allowed_html ),
-					esc_html( $passed ),
-					esc_html( $default )
-				),
-				esc_html( $title )
-			);
+			return new WP_Error( 'namespace_no_match', sprintf( '<h1>%1$s</h1><p>Onboarding Config was instantiated with default namespace.</p><p>%2$s</p><p>%3$s</p><hr><p>Change this default namespace: <code><b><em>%4$s</em></b></code></p>', $title, $note, $located, $default ), $title );
 		}
 
 		return $ns;
